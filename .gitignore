@@ -1,0 +1,8 @@
+*.o
+main
+main.dSYM/
+compile_flags.txt
+ps.am
+ps.as
+outputs/
+.vscode/
