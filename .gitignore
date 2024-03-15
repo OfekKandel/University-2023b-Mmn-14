@@ -1,8 +1,12 @@
+# Objects & executable
 *.o
 main
-main.dSYM/
+
+# Debug info & cache
 compile_flags.txt
-ps.am
-ps.as
-outputs/
 .vscode/
+main.dSYM/
+
+# Inputs & example outputs
+inputs/
+example_outptus/

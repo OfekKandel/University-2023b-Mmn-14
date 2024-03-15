@@ -1,12 +1,15 @@
 CC = gcc
 CFLAGS = -Wall -ansi -pedantic -g
 
-main: main.c preprocessor.o parse_util.o macro_table.o
+main: main.c objs/preprocessor.o objs/parse_util.o objs/macro_table.o
 	$(CC) $(CFLAGS) -o $@ $^
 
-%.o: %.c
+objs/%.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
+
+objs:
+	mkdir objs
 
 # Clean target
 clean:
-	rm *.o
+	rm -rf ./objs

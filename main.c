@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
 
   /* [FOR DEBUG] */
   argc = 2;
-  argv[1] = "ps";
+  argv[1] = "inputs/ps";
 
   if (argc <= 1) {
     printf("ERROR: No files to assemble were given");
