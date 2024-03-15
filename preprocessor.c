@@ -3,6 +3,7 @@
 #include "parse_util.h"
 #include <ctype.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define MACRO_KEYWORD "mcr"
@@ -97,9 +98,8 @@ static void write_macro_invocation(MacroLines *invoked_mcr, FILE *out_file) {
   }
 }
 
-
-/* [DOCS NEEDED] */
-static void read_file(FILE *src_file, const char *src_path, FILE *out_file,
+/* [DOCS NEEDED] returns whether a new file was created */
+static bool read_file(FILE *src_file, const char *src_path, FILE *out_file,
                       const char *out_path) {
   char line[MAX_LINE_LEN + 1], *mcr_name;
   int n_line = 1;
@@ -141,32 +141,52 @@ static void read_file(FILE *src_file, const char *src_path, FILE *out_file,
   }
 
   printf("Finished file %s\n", src_path);
+
+  /* Remove .am file if no macros exist */
+  if (table.head == NULL) {
+    if (remove(out_path) != 0)
+      printf("WARNING: Failed to delete preprocessor out file %s (not needed "
+             "because no macros were found)\n", out_path);
+    free_table(table);
+    return false;
+  }
+
+  free_table(table);
+  return true;
 }
 
 /* Global functions */
 
-bool process_file(char *filename) {
+int process_file(char *filename) {
   char *src_file_path, *out_file_path;
   FILE *src_file, *out_file;
+  int read_file_res;
 
   /* Open source file */
   src_file_path = with_ext(filename, ".as");
   src_file = fopen(src_file_path, "r");
   if (src_file == NULL) {
-    printf("ERROR [preprocessor]: Failed to open assembly source file '%s'",
+    printf("ERROR [preprocessor]: Failed to open assembly source file '%s'\n",
            src_file_path);
+    return -1;
   }
 
   /* Open output file */
   out_file_path = with_ext(filename, ".am");
   out_file = fopen(out_file_path, "w");
   if (out_file == NULL) {
-    printf("ERROR [preprocessor]: Failed to open assembly output file '%s'",
+    printf("ERROR [preprocessor]: Failed to open assembly output file '%s'\n",
            out_file_path);
+    return -1;
   }
 
   /* Process file */
-  read_file(src_file, src_file_path, out_file, out_file_path);
+  read_file_res =  read_file(src_file, src_file_path, out_file, out_file_path);
 
-  return true;
+  /* Close, free and return */
+  fclose(src_file);
+  fclose(out_file);
+  free(src_file_path);
+  free(out_file_path);
+  return read_file_res;
 }

@@ -10,7 +10,7 @@ Command parse_line(char line[MAX_LINE_LEN]) {
 
 char *with_ext(const char *filename, const char *extension) {
   /* Allocate correctly sized buffer for the new filename */
-  int new_length = (strlen(filename) + strlen(extension));
+  int new_length = (strlen(filename) + strlen(extension) + 1);
   char *filepath = malloc(sizeof(char) * new_length);
 
   /* Join filename and extension */
