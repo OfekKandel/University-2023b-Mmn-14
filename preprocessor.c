@@ -37,7 +37,7 @@ static char *read_macro_declaration(char *line) {
 
   /* Check that there is no extraneous text */
   line = skip_space(++line);
-  if (!is_terminatior(line[0])) {
+  if (!is_terminator(line[0])) {
     printf("ERROR: Extraneous text after macro declaration\n");
     return NULL;
   }
@@ -55,7 +55,7 @@ static int read_macro_termination(char *line) {
   /* Check that there is no extraneous text */
   line += strlen(END_MACRO_KEYWORD);
   line = skip_space(line);
-  if (!is_terminatior(line[0])) {
+  if (!is_terminator(line[0])) {
     printf("ERROR: Extraneous text after macro termination\n");
     return true; /* True but still prints an error of course */
   }
@@ -84,7 +84,7 @@ static MacroLines *read_macro_invocation(MacroTable *table, char *line) {
 
   /* Check that there is no extraneous text */
   line = skip_space(line);
-  if (!is_terminatior(line[0]))
+  if (!is_terminator(line[0]))
     printf("ERROR: Extraneous text after macro invocation\n");
 
   return lines_found;
