@@ -6,6 +6,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "assembler.h"
 #include "parse_util.h"
 #include "preprocessor.h"
 
@@ -38,6 +39,7 @@ int analyze_file(char *filename) {
   }
 
   /* Run assembler */
+  assemble_file(filename, (preprocessor_result) ? PROCESSED_FILE_SUFFIX : SOURCE_FILE_SUFFIX);
 
   free(filepath);
   return true;

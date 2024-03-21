@@ -1,6 +1,5 @@
-#pragma once
-
 /* [DOCS NEEDED] */
+#pragma once
 
 /* [DOCS NEEDED] */
 typedef struct MacroLineNode {
@@ -32,7 +31,7 @@ MacroLines *insert_macro(MacroTable *table, char *name);
 /* [DOCS NEEDED] */
 MacroLines *get_macro_lines(MacroTable *table, char *name);
 /* [DOCS NEEDED] */
-void free_table(MacroTable table);
+void free_macro_table(MacroTable table);
 
 /* Lines functions */
 /* [DOCS NEEDED] */

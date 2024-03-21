@@ -2,6 +2,7 @@
 #include "macro_table.h"
 #include "parse_util.h"
 #include <ctype.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,7 +30,6 @@ static char *read_macro_declaration(char *line) {
     printf("ERROR: Missing name after macro declaration\n");
     return NULL;
   }
-
   /* Scan the macro name */
   mcr_name = line;
   line = skip_to_space(line);
@@ -146,12 +146,13 @@ static bool read_file(FILE *src_file, const char *src_path, FILE *out_file,
   if (table.head == NULL) {
     if (remove(out_path) != 0)
       printf("WARNING: Failed to delete preprocessor out file %s (not needed "
-             "because no macros were found)\n", out_path);
-    free_table(table);
+             "because no macros were found)\n",
+             out_path);
+    free_macro_table(table);
     return false;
   }
 
-  free_table(table);
+  free_macro_table(table);
   return true;
 }
 
@@ -172,7 +173,7 @@ int process_file(char *filename) {
   }
 
   /* Open output file */
-  out_file_path = with_ext(filename, ".am");
+  out_file_path = with_ext(filename, PROCESSED_FILE_SUFFIX);
   out_file = fopen(out_file_path, "w");
   if (out_file == NULL) {
     printf("ERROR [preprocessor]: Failed to open assembly output file '%s'\n",
@@ -181,7 +182,7 @@ int process_file(char *filename) {
   }
 
   /* Process file */
-  read_file_res =  read_file(src_file, src_file_path, out_file, out_file_path);
+  read_file_res = read_file(src_file, src_file_path, out_file, out_file_path);
 
   /* Close, free and return */
   fclose(src_file);

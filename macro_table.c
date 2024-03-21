@@ -46,7 +46,7 @@ static void free_table_node(MacroNode *node) {
   free(node);
 }
 
-void free_table(MacroTable table) {
+void free_macro_table(MacroTable table) {
   free_table_node(table.head);
 }
 

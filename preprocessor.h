@@ -1,8 +1,6 @@
 /* [DOCS NEEDED] */
 #pragma once
 
-#include <stdbool.h>
-
 #define PROCESSED_FILE_SUFFIX ".am"
 
 /* [DOCS NEEDED] return -1 if preprocessor failed, 0 if no .am file was created,

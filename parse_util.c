@@ -15,7 +15,7 @@ static int scan_label(char line[MAX_LINE_LEN], char **out) {
   /* Scan label word end of label or command */
   word = line;
   while (!is_terminator(line[0]) && !isspace(line[0]) && line[0] != ':') {
-    if (!isalpha(line[0]) && !isnumber(line[0]))
+    if (!isalpha(line[0]) && !isdigit(line[0]))
       illegal_char = line[0];
     line++;
   }
@@ -69,8 +69,7 @@ static LineType get_line_content_type(char content[]) {
  * terminator */
 static char *scan_to_separator(char content[], char separator) {
   /* Scan argument */
-  while ((isnumber(content[0]) || isalpha(content[0])) &&
-         content[0] != separator)
+  while (content[0] != separator && !is_terminator(content[0]) && !isspace(content[0]))
     content++;
 
   /* Terminate argument and continue to separator if there was space */
@@ -113,6 +112,10 @@ static char *scan_argument_and_separator(char content[], char separator) {
 /* [DOCS NEEDED] */
 static void scan_define(char content[], ParsedLine *out) {
   char *word;
+
+  /* Print warning if there is a label */
+  if (out->content.command.label != NULL)
+    printf("WARNING: A label is meaningless before a constant defenition\n");
 
   /* Skip space, ".define" word, and following space */
   content = skip_space(content);
@@ -301,7 +304,7 @@ ParsedLine parse_line(char line[MAX_LINE_LEN]) {
     scan_define(line, &out);
     break;
   case DotInstruction:
-      scan_dot_instruction(line, &out);
+    scan_dot_instruction(line, &out);
     break;
   case Command:
     scan_command(line, &out);
@@ -324,6 +327,39 @@ char *with_ext(const char *filename, const char *extension) {
   strcat(filepath, extension);
 
   return filepath;
+}
+
+int scan_number(char *text, int *out) {
+  int is_negative = false;
+  text = skip_space(text);
+
+  if (text[0] != '+' && text[0] != '-' && !isdigit(text[0])) {
+    printf("ERROR: Number must start with '+', '-', or a digit\n");
+    return false;
+  }
+
+  if (text[0] == '-')
+    is_negative = true;
+
+  if (!isdigit(text[0]))
+    text++;
+
+  /* Load all digits into out */
+  for (; isdigit(text[0]); text++, *out *= 10) {
+    *out += text[0] - '0';
+  }
+  *out /= 10;
+
+  if (!is_terminator(text[0]) && !isspace(text[0])) {
+    printf(
+        "ERROR: Number must only contain '+', '-' (at the start), or digits\n");
+    return false;
+  }
+
+  if (is_negative)
+    *out *= -1;
+
+  return true;
 }
 
 char *skip_space(char *str) {

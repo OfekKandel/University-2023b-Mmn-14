@@ -50,6 +50,8 @@ ParsedLine parse_line(char line[MAX_LINE_LEN]);
 char *with_ext(const char *filename, const char *extension);
 
 /* Smaller functions */
+/* [DOCS NEEDED] returns true if the text was not a valid number */
+int scan_number(char *text, int *out);
 
 /* Return a pointer to the next position that isn't a letter in a string */
 char *skip_alpha(char *str);
