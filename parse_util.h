@@ -49,6 +49,9 @@ ParsedLine parse_line(char line[MAX_LINE_LEN]);
  * be freed) */
 char *with_ext(const char *filename, const char *extension);
 
+/* [DOCS NEEDED] */
+int scan_argument(char content[], char separator);
+
 /* Smaller functions */
 /* [DOCS NEEDED] returns true if the text was not a valid number */
 int scan_number(char *text, int *out);

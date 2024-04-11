@@ -1,4 +1,5 @@
 #include "parse_util.h"
+#include <_ctype.h>
 #include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -67,9 +68,11 @@ static LineType get_line_content_type(char content[]) {
  * be the separator, if there was no separator it will be a some other
  * character, if there is no text at all after the argument it will be a
  * terminator */
+/* TODO: Replace usage of this with scan_argument */
 static char *scan_to_separator(char content[], char separator) {
   /* Scan argument */
-  while (content[0] != separator && !is_terminator(content[0]) && !isspace(content[0]))
+  while (content[0] != separator && !is_terminator(content[0]) &&
+         !isspace(content[0]))
     content++;
 
   /* Terminate argument and continue to separator if there was space */
@@ -89,6 +92,7 @@ static char *scan_to_separator(char content[], char separator) {
  * is no separator and there's another argument, a terminator if there is
  * no text after the argument, or after the separator (while a little strange,
  * this is convenient for the different cases of error handling)*/
+/* TODO: Replace usage of this with scan_argument */
 static char *scan_argument_and_separator(char content[], char separator) {
   /* Scan until the separator (as described in function docs) */
   content = scan_to_separator(content, separator);
@@ -109,13 +113,60 @@ static char *scan_argument_and_separator(char content[], char separator) {
   return content;
 }
 
+int scan_argument(char content[], char separator) {
+  char *start = content;
+
+  /* Return errors if there is no argument */
+  if (content == NULL || is_terminator(content[0]))
+    return -5; /* -5: No argument (only space) */
+  if (content[0] == separator)
+    return -1; /* -1: Missing first argument (starts with separator) */
+
+  /* Progress until space/separator/terminator (this is where the argument is)*/
+  while (!isspace(content[0]) && content[0] != separator &&
+         !is_terminator(content[0]))
+    content++;
+
+  /* If there is space, terminate the word and skip it */
+  if (isspace(content[0])) {
+    content[0] = '\0';
+    content = skip_space(++content);
+  }
+
+  /* Return if there is no text after the argument */
+  if (is_terminator(content[0])) {
+    content[0] = '\0';
+    return 0; /* 0: Last argument */
+  }
+
+  /* Return error if text was found instead of a separator */
+  if (content[0] != separator)
+    return -2; /* -2: Missing separator between arguments */
+
+  /* Terminate word where the separator is and skip following space */
+  content[0] = '\0';
+  content = skip_space(++content);
+
+  /* Return error if there is an extra separator */
+  if (content[0] == separator)
+    return -3; /* -3: Two consecutive separator */
+
+  /* Return error if there is not another argument following the separator */
+  if (is_terminator(content[0]))
+    return -4; /* -4: Trailing separator */
+
+  /* Return number of chars to skip to next argument */
+  return content - start;
+}
+
 /* [DOCS NEEDED] */
 static void scan_define(char content[], ParsedLine *out) {
   char *word;
 
   /* Print warning if there is a label */
   if (out->content.command.label != NULL)
-    printf("WARNING: A label is meaningless before a constant defenition\n");
+    printf("ERROR: A label is meaningless before a constant defenition and is "
+           "not allowed\n");
 
   /* Skip space, ".define" word, and following space */
   content = skip_space(content);
@@ -238,7 +289,6 @@ static void scan_command(char content[], ParsedLine *out) {
 /* [DOCS NEEDED] */
 static void scan_dot_instruction(char content[], ParsedLine *out) {
   char *word;
-  int n_args = 1;
 
   /* Skip space and initial dot */
   content = skip_space(content);
