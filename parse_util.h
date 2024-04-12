@@ -52,6 +52,9 @@ char *with_ext(const char *filename, const char *extension);
 /* [DOCS NEEDED] */
 int scan_argument(char content[], char separator);
 
+/* [DOCS NEEDED] */
+int scan_string(char content[]);
+
 /* Smaller functions */
 /* [DOCS NEEDED] returns true if the text not a valid number */
 int scan_number(char *text, int *out);

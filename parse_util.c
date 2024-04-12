@@ -1,5 +1,4 @@
 #include "parse_util.h"
-#include <_ctype.h>
 #include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -157,6 +156,47 @@ int scan_argument(char content[], char separator) {
 
   /* Return number of chars to skip to next argument */
   return content - start;
+}
+
+int scan_string(char content[]) {
+  char *init = content;
+  char *str_start;
+
+  /* Return error if there is no content */
+  if (content == NULL)
+    return -1; /* -1: No string */
+
+  /* Skip space */
+  content = skip_space(content);
+
+  /* Return error if there is no string */
+  if (is_terminator(content[0]))
+    return -1; /* -1: No string (only space) */
+
+  /* Return error if a quotation mark is missing */
+  if (content[0] != '"')
+    return -2; /* -2: Missing opening quotation mark */
+  str_start = ++content;
+
+  /* Progress until next quotation mark */
+  while (content[0] != '"' && !is_terminator(content[0]))
+    content++;
+
+  /* Return error if there is no closing quotation mark  */
+  if (is_terminator(content[0]))
+    return -3; /* -3: Missing closing quotation mark */
+
+  /* Terminate word where the separator is and skip following space */
+  content[0] = '\0';
+  content = skip_space(++content);
+
+  /* Return error if there is text after the string */
+  content = skip_space(content);
+  if (!is_terminator(content[0]))
+    return -4; /* -4: Extraneous text after string declaration */
+
+  /* Return number of chars to skip to start of string */
+  return str_start - init;
 }
 
 /* [DOCS NEEDED] */
