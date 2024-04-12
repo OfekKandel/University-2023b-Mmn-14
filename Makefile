@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -ansi -pedantic -g
 
-main: main.c objs/preprocessor.o objs/parse_util.o objs/macro_table.o objs/assembler.o objs/symbol_table.o
+main: main.c objs/preprocessor.o objs/parse_util.o objs/macro_table.o objs/assembler.o objs/symbol_table.o objs/binary_table.o
 	$(CC) $(CFLAGS) -o $@ $^
 
 objs/%.o: %.c | objs

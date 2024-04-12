@@ -3,6 +3,7 @@
 #include "binary_table.h"
 #include "parse_util.h"
 #include "symbol_table.h"
+#include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,11 +26,40 @@ static int add_define_symbol(DefineLine line, SymbolTable *table) {
   return true;
 }
 
+/* [DOCS NEEDED] returns false on failure */
+static int get_constant_value(SymbolTable *symbol_table, char *str, int *out) {
+  SymbolTableNode *constant;
+
+  /* Check if this is written as a number */
+  if (isdigit(str[0]) || str[0] == '+' || str[0] == '-')
+    return scan_number(str, out);
+
+  /* Else search for constant with the given name */
+  constant = search_symbol(symbol_table, str);
+
+  /* Print error if no symbol was found */
+  if (constant == NULL) {
+    printf("ERROR: No constant named '%s' found\n", str);
+    return false;
+  }
+  
+  /* Print error if the symbol is not a constant */
+  if (constant->type != 'm') {
+    printf("ERROR: Variables used in data instruction must be constants (.define)\n");
+    return false;
+  }
+
+  *out =  constant->value;
+  return true;
+}
+
 /* [DOCS NEEDED] returns how much to skip, 0 if scan should stop, -1 if there
  * were errors */
 static int add_data_argument(char *content, BinaryTable *data_table,
                              SymbolTable *symbol_table) {
+  BinaryWord word;
   int res = scan_argument(content, ',');
+  int value;
 
   /* TODO: Better as switch? Better to extract the return? */
   if (res == -5) {
@@ -55,7 +85,13 @@ static int add_data_argument(char *content, BinaryTable *data_table,
     return -1;
   }
 
-  /* TODO: Parse argument, handle error, and add it to table */
+  /* Get value of argument, return on error */
+  if (!get_constant_value(symbol_table, content, &value))
+    return -1;
+
+  /* Add value to data table */
+  word.content = value;
+  append_word(data_table, word);
 
   return res; /* Return chars to skip */
 }
@@ -121,7 +157,7 @@ static int first_pass(FILE *src_file, SymbolTable *symbol_table,
   char line[MAX_LINE_LEN + 1];
 
   while (fgets(line, sizeof(line), src_file) != NULL) {
-    if (!first_pass_line(line, symbol_table, data_table, instruction_table))
+    if (!first_pass_line(line, symbol_table, instruction_table, data_table))
       succesful = false;
   }
 
@@ -133,6 +169,10 @@ static void read_file(FILE *src_file, const char *src_path, FILE *out_file,
   SymbolTable symbol_table;
   BinaryTable data_table, instruction_table;
   symbol_table.head = NULL;
+  data_table.head = NULL;
+  data_table.counter = 0;
+  instruction_table.head = NULL;
+  instruction_table.counter = 0;
 
   /* Return if first pass failed */
   if (!first_pass(src_file, &symbol_table, &instruction_table, &data_table)) {

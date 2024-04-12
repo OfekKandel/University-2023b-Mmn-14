@@ -381,6 +381,7 @@ char *with_ext(const char *filename, const char *extension) {
 
 int scan_number(char *text, int *out) {
   int is_negative = false;
+  *out = 0;
   text = skip_space(text);
 
   if (text[0] != '+' && text[0] != '-' && !isdigit(text[0])) {

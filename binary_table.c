@@ -5,13 +5,13 @@
 
 void append_word(BinaryTable *table, BinaryWord word) {
   BinaryTableNode *node = malloc(sizeof(BinaryTableNode));
-  node->content = word;
+  node->content.content = word.content;
   table->counter++;
 
   if (table->head == NULL)
     table->head = table->tail = node;
   else
-    table->tail->next = node;
+    table->tail = table->tail->next = node;
 }
 
 static void free_binary_node(BinaryTableNode *node) {

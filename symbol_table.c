@@ -26,6 +26,17 @@ int append_symbol(SymbolTable *table, char *name, char type, int value) {
   return true;
 }
 
+SymbolTableNode *search_symbol(SymbolTable *table, char *name) {
+  SymbolTableNode *iter;
+
+  /* Find symbol */
+  for (iter = table->head; iter != NULL; iter = iter->next)
+    if (strcmp(iter->name, name) == 0)
+      return iter;
+
+  return NULL;
+}
+
 static void free_symbol_table_node(SymbolTableNode *node) {
   if (node == NULL)
     return;
