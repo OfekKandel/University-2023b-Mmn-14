@@ -15,8 +15,7 @@ static int scan_label(char line[MAX_LINE_LEN], char **out) {
   /* Scan label word end of label or command */
   word = line;
   while (!is_terminator(line[0]) && !isspace(line[0]) && line[0] != ':') {
-    if (!isalpha(line[0]) && !isdigit(line[0]))
-      illegal_char = line[0];
+    if (!isalpha(line[0]) && !isdigit(line[0])) illegal_char = line[0];
     line++;
   }
 
@@ -28,8 +27,8 @@ static int scan_label(char line[MAX_LINE_LEN], char **out) {
 
   /* Print illegal character error & return false if needed */
   if (illegal_char) {
-    printf("ERROR: Illegal character '%c' in label name: '%.*s'\n",
-           illegal_char, (int)(line - word + 1), word);
+    printf("ERROR: Illegal character '%c' in label name: '%.*s'\n", illegal_char,
+           (int)(line - word + 1), word);
     return false;
   }
 
@@ -47,8 +46,7 @@ static LineType get_line_content_type(char content[]) {
   content = skip_space(content);
 
   /* Check if its not a dot-command */
-  if (content[0] != '.')
-    return Command;
+  if (content[0] != '.') return Command;
 
   /* Scan first word (without dot)*/
   word = ++content;
@@ -56,8 +54,7 @@ static LineType get_line_content_type(char content[]) {
   content[0] = '\0';
 
   /* Check against if its a define command */
-  if (strcmp(word, "define") == 0)
-    return Define;
+  if (strcmp(word, "define") == 0) return Define;
 
   return DotInstruction;
 }
@@ -70,8 +67,7 @@ static LineType get_line_content_type(char content[]) {
 /* TODO: Replace usage of this with scan_argument */
 static char *scan_to_separator(char content[], char separator) {
   /* Scan argument */
-  while (content[0] != separator && !is_terminator(content[0]) &&
-         !isspace(content[0]))
+  while (content[0] != separator && !is_terminator(content[0]) && !isspace(content[0]))
     content++;
 
   /* Terminate argument and continue to separator if there was space */
@@ -81,8 +77,7 @@ static char *scan_to_separator(char content[], char separator) {
   }
 
   /* Terminate argument properly as long as there is some terminator there */
-  if (is_terminator(content[0]))
-    content[0] = '\0';
+  if (is_terminator(content[0])) content[0] = '\0';
 
   return content;
 }
@@ -97,12 +92,10 @@ static char *scan_argument_and_separator(char content[], char separator) {
   content = scan_to_separator(content, separator);
 
   /* Return a terminator if there is no text after the argument */
-  if (is_terminator(content[0]))
-    return content;
+  if (is_terminator(content[0])) return content;
 
   /* Return NULL if there is no following separator */
-  if (content[0] != separator)
-    return NULL;
+  if (content[0] != separator) return NULL;
 
   /* Terminate argument at separator and skip to the next one */
   content[0] = '\0';
@@ -116,14 +109,11 @@ int scan_argument(char content[], char separator) {
   char *start = content;
 
   /* Return errors if there is no argument */
-  if (content == NULL || is_terminator(content[0]))
-    return -5; /* -5: No argument (only space) */
-  if (content[0] == separator)
-    return -1; /* -1: Missing first argument (starts with separator) */
+  if (content == NULL || is_terminator(content[0])) return -5; /* -5: No argument (only space) */
+  if (content[0] == separator) return -1; /* -1: Missing first argument (starts with separator) */
 
   /* Progress until space/separator/terminator (this is where the argument is)*/
-  while (!isspace(content[0]) && content[0] != separator &&
-         !is_terminator(content[0]))
+  while (!isspace(content[0]) && content[0] != separator && !is_terminator(content[0]))
     content++;
 
   /* If there is space, terminate the word and skip it */
@@ -139,20 +129,17 @@ int scan_argument(char content[], char separator) {
   }
 
   /* Return error if text was found instead of a separator */
-  if (content[0] != separator)
-    return -2; /* -2: Missing separator between arguments */
+  if (content[0] != separator) return -2; /* -2: Missing separator between arguments */
 
   /* Terminate word where the separator is and skip following space */
   content[0] = '\0';
   content = skip_space(++content);
 
   /* Return error if there is an extra separator */
-  if (content[0] == separator)
-    return -3; /* -3: Two consecutive separator */
+  if (content[0] == separator) return -3; /* -3: Two consecutive separator */
 
   /* Return error if there is not another argument following the separator */
-  if (is_terminator(content[0]))
-    return -4; /* -4: Trailing separator */
+  if (is_terminator(content[0])) return -4; /* -4: Trailing separator */
 
   /* Return number of chars to skip to next argument */
   return content - start;
@@ -163,19 +150,16 @@ int scan_string(char content[]) {
   char *str_start;
 
   /* Return error if there is no content */
-  if (content == NULL)
-    return -1; /* -1: No string */
+  if (content == NULL) return -1; /* -1: No string */
 
   /* Skip space */
   content = skip_space(content);
 
   /* Return error if there is no string */
-  if (is_terminator(content[0]))
-    return -1; /* -1: No string (only space) */
+  if (is_terminator(content[0])) return -1; /* -1: No string (only space) */
 
   /* Return error if a quotation mark is missing */
-  if (content[0] != '"')
-    return -2; /* -2: Missing opening quotation mark */
+  if (content[0] != '"') return -2; /* -2: Missing opening quotation mark */
   str_start = ++content;
 
   /* Progress until next quotation mark */
@@ -183,8 +167,7 @@ int scan_string(char content[]) {
     content++;
 
   /* Return error if there is no closing quotation mark  */
-  if (is_terminator(content[0]))
-    return -3; /* -3: Missing closing quotation mark */
+  if (is_terminator(content[0])) return -3; /* -3: Missing closing quotation mark */
 
   /* Terminate word where the separator is and skip following space */
   content[0] = '\0';
@@ -192,8 +175,7 @@ int scan_string(char content[]) {
 
   /* Return error if there is text after the string */
   content = skip_space(content);
-  if (!is_terminator(content[0]))
-    return -4; /* -4: Extraneous text after string declaration */
+  if (!is_terminator(content[0])) return -4; /* -4: Extraneous text after string declaration */
 
   /* Return number of chars to skip to start of string */
   return str_start - init;
@@ -273,8 +255,7 @@ static void scan_command(char content[], ParsedLine *out) {
   content = skip_space(++content);
 
   /* If there's no first argument return */
-  if (is_terminator(content[0]))
-    return;
+  if (is_terminator(content[0])) return;
 
   /* Print error if there is a comma but no argument */
   if (content[0] == ',') {
@@ -385,8 +366,7 @@ ParsedLine parse_line(char line[MAX_LINE_LEN]) {
   }
 
   out.content.command.label = label;
-  if (label)
-    line += strlen(label) + 1;
+  if (label) line += strlen(label) + 1;
 
   /* Parse rest of command by type */
   out.line_type = get_line_content_type(line);
@@ -432,11 +412,9 @@ int scan_number(char *text, int *out) {
     return false;
   }
 
-  if (text[0] == '-')
-    is_negative = true;
+  if (text[0] == '-') is_negative = true;
 
-  if (!isdigit(text[0]))
-    text++;
+  if (!isdigit(text[0])) text++;
 
   /* Load all digits into out */
   for (; isdigit(text[0]); text++, *out *= 10) {
@@ -445,21 +423,54 @@ int scan_number(char *text, int *out) {
   *out /= 10;
 
   if (!is_terminator(text[0]) && !isspace(text[0])) {
-    printf(
-        "ERROR: Number must only contain '+', '-' (at the start), or digits\n");
+    printf("ERROR: Number must only contain '+', '-' (at the start), or digits\n");
     return false;
   }
 
-  if (is_negative)
-    *out *= -1;
+  if (is_negative) *out *= -1;
 
   return true;
 }
 
+char *scan_array_index(char content[]) {
+  char *index;
+
+  /* Scan until opening bracket */
+  while (!is_terminator(content[0]) && content[0] != '[')
+    content++;
+
+  /* Print error and return if there is no opening bracket */
+  if (is_terminator(content[0])) {
+    printf("ERROR: To index an array a position must be provided within square brackets\n");
+    return NULL;
+  }
+
+  /* Terminate symbol, and scan until closing bracket */
+  content[0] = '\0';
+  index = ++content;
+  while (!is_terminator(content[0]) && content[0] != ']')
+    content++;
+
+  /* Print error if there is no closing bracket */
+  if (is_terminator(content[0])) {
+    printf("ERROR: Missing closing bracket in indexed array \n");
+    return NULL;
+  }
+  content[0] = '\0';
+  content++;
+
+  /* Check that there is no text after the closing bracket */
+  if (content[0] != '\0') {
+    printf("ERROR: Extraneous text after indexed array argument\n");
+    return NULL;
+  }
+
+  return index;
+}
+
 int is_register_name(char *arg) {
   /* Matches argument of form r0 to r7 */
-  return arg[0] == 'r' && isdigit(arg[1]) && arg[1] - '0' <= 7 &&
-         arg[2] == '\0';
+  return arg[0] == 'r' && isdigit(arg[1]) && arg[1] - '0' <= 7 && arg[2] == '\0';
 }
 
 char *skip_space(char *str) {

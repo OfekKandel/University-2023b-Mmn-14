@@ -11,6 +11,7 @@ typedef struct BinaryWord {
 /* [DOCS NEEDED] */
 typedef struct BinaryTableNode {
   BinaryWord content;
+  char *symbol;
   struct BinaryTableNode *next;
 } BinaryTableNode;
 
@@ -25,7 +26,13 @@ typedef struct BinaryTable {
 void append_word(BinaryTable *table, BinaryWord word);
 
 /* [DOCS NEEDED] */
+void append_symbol_word(BinaryTable *table, char *symbol);
+
+/* [DOCS NEEDED] */
 void free_binary_table(BinaryTable table);
+
+
+/* TODO: Remove this it is not needed */
 
 /* [DOCS NEEDED] */
 typedef struct SymbolRefTableNode {

@@ -28,7 +28,7 @@ typedef struct DotInstructionLine {
 typedef struct CommandLine {
   char *label; /* Optional */
   char *cmd;
-  char *src_arg; /* Optional */
+  char *src_arg;  /* Optional */
   char *dest_arg; /* Optional */
 } CommandLine;
 
@@ -51,9 +51,12 @@ char *with_ext(const char *filename, const char *extension);
 
 /* [DOCS NEEDED] */
 int scan_argument(char content[], char separator);
-
 /* [DOCS NEEDED] */
 int scan_string(char content[]);
+
+/* [DOCS NEEDED] returns a string containing the index/constant's name, NULL on error, the array
+ * symbol will be terminated, meaning the given content argument can be used to access it */
+char *scan_array_index(char content[]);
 
 /* Smaller functions */
 

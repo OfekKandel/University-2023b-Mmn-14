@@ -16,8 +16,7 @@ static int add_define_symbol(DefineLine line, SymbolTable *table) {
   /* Scan value number and return on error */
   if (!scan_number(line.value, &value)) return false;
 
-  /* Add symbol to table */
-  if (!append_symbol(table, line.name, 'm', value)) {
+  /* Add symbol to table */ if (!append_symbol(table, line.name, 'm', value)) {
     printf("ERROR: Attempt to redefine a constant\n");
     return false;
   }
@@ -43,8 +42,7 @@ static int get_constant_value(SymbolTable *symbol_table, char *str, int *out) {
 
   /* Print error if the symbol is not a constant */
   if (constant->type != 'm') {
-    printf("ERROR: Variables used in data instruction must be constants "
-           "(.define)\n");
+    printf("ERROR: Variable '%s' is not a constant\n", constant->name);
     return false;
   }
 
@@ -177,10 +175,21 @@ typedef struct CommandFirstWord {
   unsigned int : 4; /* Unused */
 } CommandFirstWord;
 
+typedef struct ArgumentWord {
+  unsigned int are : 2;
+  unsigned int content : 12;
+} ArgumentWord;
+
 static BinaryWord first_word_to_binary(CommandFirstWord first) {
   BinaryWord word;
   word.content =
       (first.are) | (first.dest_adressing << 2) | (first.src_adressing << 4) | (first.opcode << 6);
+  return word;
+}
+
+static BinaryWord arg_word_to_binary(ArgumentWord first) {
+  BinaryWord word;
+  word.content = (first.are) | (first.content << 2);
   return word;
 }
 
@@ -223,6 +232,69 @@ static int verify_adressing_mode(int opcode, int src_adressing, int dest_adressi
   return 0; /* 0 - Both addressings are valid */
 }
 
+/* [DOCS NEEDED] returns false on fail */
+static int encode_array_index_arg(char *arg, BinaryTable *instruction_table,
+                                  SymbolTable *symbol_table) {
+  int index_value;
+  char *index_str;
+  ArgumentWord index_word;
+  index_word.are = 0;
+
+  index_str = scan_array_index(arg);
+  if (index_str == NULL) return -1;
+
+  /* Add word for the array symbol */
+  append_symbol_word(instruction_table, arg);
+
+  /* Get value of the index and add it to the table */
+  if (!get_constant_value(symbol_table, index_str, &index_value)) return false;
+  index_word.content = index_value;
+  append_word(instruction_table, arg_word_to_binary(index_word));
+
+  return true;
+}
+
+/* [DOCS NEEDED] */
+static void encode_registers(BinaryTable *instruction_table, char *src_reg, char *dest_reg) {
+  ArgumentWord word;
+  word.are = 0;
+  word.content = 0;
+
+  if (dest_reg != NULL) /* Extract value from name and place it in bits 2-4 */
+    word.content |= (dest_reg[1] - '0') << 0;
+  if (src_reg != NULL) /* Extract value from name and place it in bits 5-7 */
+    word.content |= (src_reg[1] - '0') << 3;
+
+  append_word(instruction_table, arg_word_to_binary(word));
+}
+
+/* [DOCS NEEDED] returns false if the argument could not be added, registers are not encoded with
+ * this function, instead with encode_registers */
+static int add_arg_word(char *arg, int adressing_mode, BinaryTable *instruction_table,
+                        SymbolTable *symbol_table) {
+  ArgumentWord word;
+  int value;
+  word.are = 0;
+
+  switch (adressing_mode) {
+  case 0: /* 0 - Immediate */
+    if (!get_constant_value(symbol_table, arg + 1, &value)) return false;
+    word.content = value;
+    append_word(instruction_table, arg_word_to_binary(word));
+    break;
+  case 1: /* 1 - Direct */
+    append_symbol_word(instruction_table, arg);
+    break;
+  case 2: /* 2 - Index */
+    if (!encode_array_index_arg(arg, instruction_table, symbol_table)) return false;
+    break;
+  case 3: /* 3 - Register, skipped */
+    break;
+  }
+
+  return true;
+}
+
 /* [DOCS NEEDED] */
 static int add_command(CommandLine line, BinaryTable *instruction_table,
                        SymbolTable *symbol_table) {
@@ -232,7 +304,8 @@ static int add_command(CommandLine line, BinaryTable *instruction_table,
 
   /* If there is a label, add to the symbol table */
   /* TODO: Handle situation where the label was already defined */
-  if (line.label != NULL) append_symbol(symbol_table, line.label, 'c', instruction_table->counter);
+  if (line.label != NULL)
+    append_symbol(symbol_table, line.label, 'c', instruction_table->counter + 100);
 
   /* Get opcode for command */
   first_word.opcode = get_opcode(line.cmd);
@@ -263,6 +336,24 @@ static int add_command(CommandLine line, BinaryTable *instruction_table,
   /* Add first word to instruction table */
   word = first_word_to_binary(first_word);
   append_word(instruction_table, word);
+
+  /* Add source argument word to instruction table */
+  if (line.src_arg != NULL) {
+    if (first_word.src_adressing == 3) /* Special case for registers */
+      encode_registers(instruction_table, line.src_arg,
+                       (first_word.dest_adressing == 3) ? line.dest_arg : NULL);
+    else
+      add_arg_word(line.src_arg, first_word.src_adressing, instruction_table, symbol_table);
+  }
+
+  /* Add destination argument word to instruction table */
+  if (line.dest_arg != NULL) {
+    /* Special case for registers not already encoded */
+    if (first_word.src_adressing != 3 && first_word.dest_adressing == 3)
+      encode_registers(instruction_table, NULL, line.dest_arg);
+    else
+      add_arg_word(line.dest_arg, first_word.dest_adressing, instruction_table, symbol_table);
+  }
 
   return true;
 }
@@ -301,13 +392,13 @@ void print_bin(struct BinaryWord word) {
     else
       printf("0");
   }
-  printf("\n");
 }
 
 static void print_bin_table(BinaryTable *table) {
   BinaryTableNode *iter;
   for (iter = table->head; iter != NULL; iter = iter->next) {
     print_bin(iter->content);
+    printf(" | %s\n", iter->symbol);
   }
 }
 
@@ -321,23 +412,44 @@ static void print_sym_table(SymbolTable *table) {
 /* [DOCS NEEDED] returns whether the pass was successful */
 static int first_pass(FILE *src_file, SymbolTable *symbol_table, BinaryTable *instruction_table,
                       BinaryTable *data_table) {
+  SymbolTableNode *iter;
   bool succesful = true;
   char line[MAX_LINE_LEN + 1];
 
+  /* Encode each line */
   while (fgets(line, sizeof(line), src_file) != NULL) {
     if (!first_pass_line(line, symbol_table, instruction_table, data_table)) succesful = false;
   }
 
-  printf("DEBUG: Data table\n");
-  print_bin_table(data_table);
-  printf("DEBUG: Instruction table\n");
-  print_bin_table(instruction_table);
-  printf("DEBUG: Symbol table\n");
-  print_sym_table(symbol_table);
+  /* Progress all data values */
+  for (iter = symbol_table->head; iter != NULL; iter = iter->next)
+    if (iter->type == 'd') iter->value += 100 + instruction_table->counter;
 
   return succesful;
 }
 
+static int second_pass(SymbolTable *symbol_table, BinaryTable *instruction_table,
+                       BinaryTable *data_table) {
+  BinaryTableNode *iter;
+  SymbolTableNode *symbol;
+  bool succesful = true;
+
+  for (iter = instruction_table->head; iter != NULL; iter = iter->next) {
+    if (iter->symbol == NULL) continue;
+    symbol = search_symbol(symbol_table, iter->symbol);
+    if (symbol == NULL) {
+      printf("ERROR: Usage of undeclared symbol '%s'", iter->symbol);
+      succesful = false;
+    }
+    iter->symbol = NULL;
+    /* TODO: Add support for external here, as this sets ARE to 2 (10) */
+    iter->content.content = 2 | (symbol->value << 2);
+  }
+
+  return succesful;
+}
+
+/* [DOCS NEEDED] */
 static void read_file(FILE *src_file, const char *src_path, FILE *out_file, const char *out_path) {
   SymbolTable symbol_table;
   BinaryTable data_table, instruction_table;
@@ -347,15 +459,43 @@ static void read_file(FILE *src_file, const char *src_path, FILE *out_file, cons
   instruction_table.head = NULL;
   instruction_table.counter = 0;
 
-  /* Return if first pass failed */
+  /* Perform first pass, return if failed */
   if (!first_pass(src_file, &symbol_table, &instruction_table, &data_table)) {
     printf("DEBUG: First pass failed\n");
     free_symbol_table(symbol_table);
+    free_binary_table(data_table);
+    free_binary_table(instruction_table);
     return;
   }
-
   printf("DEBUG: Finished first pass\n");
+
+  if (!second_pass(&symbol_table, &instruction_table, &data_table)) {
+    printf("DEBUG: Second pass failed");
+    free_symbol_table(symbol_table);
+    free_binary_table(data_table);
+    free_binary_table(instruction_table);
+
+    printf("DEBUG: Instruction table\n");
+    print_bin_table(&instruction_table);
+    printf("DEBUG: Data table\n");
+    print_bin_table(&data_table);
+    printf("DEBUG: Symbol table\n");
+    print_sym_table(&symbol_table);
+    return;
+  }
+  printf("DEBUG: Finished second pass\n");
+
+  printf("DEBUG: Instruction table\n");
+  print_bin_table(&instruction_table);
+  printf("DEBUG: Data table\n");
+  print_bin_table(&data_table);
+  printf("DEBUG: Symbol table\n");
+  print_sym_table(&symbol_table);
+
+  /* Perform second pass */
   free_symbol_table(symbol_table);
+  free_binary_table(data_table);
+  free_binary_table(instruction_table);
 }
 
 int assemble_file(char *filename, char *suffix) {

@@ -6,7 +6,23 @@
 void append_word(BinaryTable *table, BinaryWord word) {
   BinaryTableNode *node = malloc(sizeof(BinaryTableNode));
   node->content.content = word.content;
+  node->symbol = NULL;
   table->counter++;
+
+  if (table->head == NULL)
+    table->head = table->tail = node;
+  else
+    table->tail = table->tail->next = node;
+}
+ 
+void append_symbol_word(BinaryTable *table, char *symbol) {
+  BinaryTableNode *node = malloc(sizeof(BinaryTableNode));
+  node->content.content = 0;
+  table->counter++;
+
+  /* Dynamically allocate space for the symbol name */
+  node->symbol = calloc(strlen(symbol) + 1, sizeof(char));
+  strcpy(node->symbol, symbol);
 
   if (table->head == NULL)
     table->head = table->tail = node;
@@ -18,6 +34,7 @@ static void free_binary_node(BinaryTableNode *node) {
   if (node == NULL)
     return;
   free_binary_node(node->next);
+  free(node->symbol);
   free(node);
 }
 
