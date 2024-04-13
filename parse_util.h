@@ -28,8 +28,8 @@ typedef struct DotInstructionLine {
 typedef struct CommandLine {
   char *label; /* Optional */
   char *cmd;
-  char *arg1; /* Optional */
-  char *arg2; /* Optional */
+  char *src_arg; /* Optional */
+  char *dest_arg; /* Optional */
 } CommandLine;
 
 typedef struct ParsedLine {
@@ -56,9 +56,11 @@ int scan_argument(char content[], char separator);
 int scan_string(char content[]);
 
 /* Smaller functions */
+
 /* [DOCS NEEDED] returns true if the text not a valid number */
 int scan_number(char *text, int *out);
-
+/* [DOCS NEEDED] return whether a given string is a register name */
+int is_register_name(char *arg);
 /* Return a pointer to the next position that isn't a letter in a string */
 char *skip_alpha(char *str);
 /* Return a pointer to the next position that isn't a space in a string */

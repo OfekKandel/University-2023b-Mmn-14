@@ -290,7 +290,7 @@ static void scan_command(char content[], ParsedLine *out) {
   /* Return if there is only one argument */
   if (is_terminator(content[0])) {
     content[0] = '\0';
-    out->content.command.arg1 = word;
+    out->content.command.dest_arg = word;
     return;
   }
 
@@ -303,7 +303,7 @@ static void scan_command(char content[], ParsedLine *out) {
 
   /* Terminate word and skip to next argument */
   content[0] = '\0';
-  out->content.command.arg1 = word;
+  out->content.command.dest_arg = word;
   content = skip_space(++content);
 
   /* Print error if there is no second argument */
@@ -316,7 +316,10 @@ static void scan_command(char content[], ParsedLine *out) {
   /* Scan second argument */
   word = content;
   content = scan_to_separator(content, ',');
-  out->content.command.arg2 = word;
+
+  /* Set first argument to be source and second to be destination */
+  out->content.command.src_arg = out->content.command.dest_arg;
+  out->content.command.dest_arg = word;
 
   /* Print error if there is extraneous text */
   if (!is_terminator(content[0])) {
@@ -451,6 +454,12 @@ int scan_number(char *text, int *out) {
     *out *= -1;
 
   return true;
+}
+
+int is_register_name(char *arg) {
+  /* Matches argument of form r0 to r7 */
+  return arg[0] == 'r' && isdigit(arg[1]) && arg[1] - '0' <= 7 &&
+         arg[2] == '\0';
 }
 
 char *skip_space(char *str) {
