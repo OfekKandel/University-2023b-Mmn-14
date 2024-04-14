@@ -1,6 +1,7 @@
 /* [DOCS NEEDED] */
 #pragma once
 
+#include <stdio.h>
 #define MAX_LINE_LEN 80
 
 typedef enum {
@@ -48,6 +49,10 @@ ParsedLine parse_line(char line[MAX_LINE_LEN]);
  * the filename. Returns the new filename, memory returned by this function must
  * be freed) */
 char *with_ext(const char *filename, const char *extension);
+
+/* [DOCS NEEDED] */
+FILE *open_with_ext(const char *filename, const char *extension, const char *mode,
+                    const char *error_desc);
 
 /* [DOCS NEEDED] */
 int scan_argument(char content[], char separator);

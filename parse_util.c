@@ -402,6 +402,21 @@ char *with_ext(const char *filename, const char *extension) {
   return filepath;
 }
 
+FILE *open_with_ext(const char *filename, const char *extension, const char *mode,
+                    const char *error_desc) {
+  char *filepath = with_ext(filename, extension);
+  FILE *file = fopen(filepath, mode);
+
+  if (file == NULL) {
+    printf("ERROR: Failed to open %s: '%s'\n", error_desc, filepath);
+    free(filepath);
+    return NULL;
+  }
+
+  free(filepath);
+  return file;
+}
+
 int scan_number(char *text, int *out) {
   int is_negative = false;
   *out = 0;

@@ -449,8 +449,38 @@ static int second_pass(SymbolTable *symbol_table, BinaryTable *instruction_table
   return succesful;
 }
 
+static void free_tables(SymbolTable symbol_table, BinaryTable data_table,
+                        BinaryTable instruction_table) {
+  free_symbol_table(symbol_table);
+  free_binary_table(data_table);
+  free_binary_table(instruction_table);
+}
+
+static void write_ob_file(FILE *ob_file, BinaryTable data_table, BinaryTable instruction_table) {
+  BinaryTableNode *iter;
+  int word_num = 100;
+  char encoding_buff[8];
+
+  /* Write header */
+  fprintf(ob_file, "%4d %d\n", instruction_table.counter, data_table.counter);
+
+  /* Write instructions */
+  for (iter = instruction_table.head; iter != NULL; iter = iter->next, word_num++) {
+    get_encoded_word(iter->content, encoding_buff);
+    fprintf(ob_file, "%04d %s\n", word_num, encoding_buff);
+  }
+
+  /* Write data */
+  for (iter = data_table.head; iter != NULL; iter = iter->next, word_num++) {
+    get_encoded_word(iter->content, encoding_buff);
+    fprintf(ob_file, "%04d %s\n", word_num, encoding_buff);
+  }
+
+  printf("DEBUG: End of write_ob_file\n");
+}
+
 /* [DOCS NEEDED] */
-static void read_file(FILE *src_file, const char *src_path, FILE *out_file, const char *out_path) {
+static void read_file(FILE *src_file, FILE *ob_file, FILE *ent_file, FILE *ext_file) {
   SymbolTable symbol_table;
   BinaryTable data_table, instruction_table;
   symbol_table.head = NULL;
@@ -462,25 +492,15 @@ static void read_file(FILE *src_file, const char *src_path, FILE *out_file, cons
   /* Perform first pass, return if failed */
   if (!first_pass(src_file, &symbol_table, &instruction_table, &data_table)) {
     printf("DEBUG: First pass failed\n");
-    free_symbol_table(symbol_table);
-    free_binary_table(data_table);
-    free_binary_table(instruction_table);
+    free_tables(symbol_table, data_table, instruction_table);
     return;
   }
   printf("DEBUG: Finished first pass\n");
 
+  /* Perform second pass, return if failed */
   if (!second_pass(&symbol_table, &instruction_table, &data_table)) {
     printf("DEBUG: Second pass failed");
-    free_symbol_table(symbol_table);
-    free_binary_table(data_table);
-    free_binary_table(instruction_table);
-
-    printf("DEBUG: Instruction table\n");
-    print_bin_table(&instruction_table);
-    printf("DEBUG: Data table\n");
-    print_bin_table(&data_table);
-    printf("DEBUG: Symbol table\n");
-    print_sym_table(&symbol_table);
+    free_tables(symbol_table, data_table, instruction_table);
     return;
   }
   printf("DEBUG: Finished second pass\n");
@@ -492,39 +512,31 @@ static void read_file(FILE *src_file, const char *src_path, FILE *out_file, cons
   printf("DEBUG: Symbol table\n");
   print_sym_table(&symbol_table);
 
-  /* Perform second pass */
-  free_symbol_table(symbol_table);
-  free_binary_table(data_table);
-  free_binary_table(instruction_table);
+  /* Write output files */
+  write_ob_file(ob_file, data_table, instruction_table);
+
+  /* Free tables and close files */
+  free_tables(symbol_table, data_table, instruction_table);
+  fclose(ob_file);
 }
 
 int assemble_file(char *filename, char *suffix) {
-  char *src_file_path, *out_file_path;
-  FILE *src_file, *out_file;
+  FILE *src_file, *ob_file, *ent_file, *ext_file;
 
-  /* Open source file */
-  src_file_path = with_ext(filename, suffix);
-  src_file = fopen(src_file_path, "r");
-  if (src_file == NULL) {
-    printf("ERROR: Failed to open assembly source file '%s'\n", src_file_path);
-    return false;
-  }
-
-  /* Open output file */
-  out_file_path = with_ext(filename, OBJECT_FILE_SUFFIX);
-  out_file = fopen(out_file_path, "w");
-  if (out_file == NULL) {
-    printf("ERROR: Failed to open object output file '%s'\n", out_file_path);
-    return false;
-  }
+  /* Open files and return on error */
+  src_file = open_with_ext(filename, suffix, "r", "assembly source file");
+  ob_file = open_with_ext(filename, OBJECT_FILE_SUFFIX, "w", "object output file");
+  ent_file = open_with_ext(filename, ENTRIES_FILE_SUFFIX, "w", "entries output file");
+  ext_file = open_with_ext(filename, EXTERNALS_FILE_SUFFIX, "w", "externals output file");
+  if (!src_file || !ob_file || !ent_file || !ext_file) return false;
 
   /* Process file */
-  read_file(src_file, src_file_path, out_file, out_file_path);
+  read_file(src_file, ob_file, ent_file, ext_file);
 
-  /* Close, free and return */
+  /* Close files */
   fclose(src_file);
-  fclose(out_file);
-  free(src_file_path);
-  free(out_file_path);
+  fclose(ob_file);
+  fclose(ent_file);
+  fclose(ext_file);
   return true;
 }

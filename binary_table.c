@@ -1,5 +1,6 @@
 /* [DOCS NEEDED] */
 #include "binary_table.h"
+#include "parse_util.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -14,7 +15,7 @@ void append_word(BinaryTable *table, BinaryWord word) {
   else
     table->tail = table->tail->next = node;
 }
- 
+
 void append_symbol_word(BinaryTable *table, char *symbol) {
   BinaryTableNode *node = malloc(sizeof(BinaryTableNode));
   node->content.content = 0;
@@ -30,9 +31,32 @@ void append_symbol_word(BinaryTable *table, char *symbol) {
     table->tail = table->tail->next = node;
 }
 
+/* [DOCS NEEDED] returns '-' if more than two bits were given */
+static char get_encoded_two_bits(int bits) {
+  switch (bits) {
+  case 0:
+    return '*';
+  case 1:
+    return '#';
+  case 2:
+    return '%';
+  case 3:
+    return '!';
+  }
+  return '-';
+}
+
+void get_encoded_word(BinaryWord word, char out[8]) {
+  int i, content = word.content;
+  for (i = 6; i >= 0; i--) {
+    out[i] = get_encoded_two_bits(content % 4); /* Extracts two last bits */
+    content >>= 2;                              /* Truncates two last bits */
+  }
+  out[7] = '\0';
+}
+
 static void free_binary_node(BinaryTableNode *node) {
-  if (node == NULL)
-    return;
+  if (node == NULL) return;
   free_binary_node(node->next);
   free(node->symbol);
   free(node);
@@ -52,13 +76,10 @@ void append_symbol_ref(SymbolRefTable *table, int ref_idx, char *symbol_name) {
 }
 
 void free_symbol_ref_table_node(SymbolRefTableNode *node) {
-  if (node == NULL)
-    return;
+  if (node == NULL) return;
   free_symbol_ref_table_node(node->next);
   free(node->symbol_name);
   free(node);
 }
 
-void free_symbol_ref_table(SymbolRefTable table) {
-  free_symbol_ref_table_node(table.head);
-}
+void free_symbol_ref_table(SymbolRefTable table) { free_symbol_ref_table_node(table.head); }

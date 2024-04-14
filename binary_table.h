@@ -29,6 +29,9 @@ void append_word(BinaryTable *table, BinaryWord word);
 void append_symbol_word(BinaryTable *table, char *symbol);
 
 /* [DOCS NEEDED] */
+void get_encoded_word(BinaryWord word, char out[8]);
+
+/* [DOCS NEEDED] */
 void free_binary_table(BinaryTable table);
 
 
