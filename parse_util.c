@@ -417,6 +417,30 @@ FILE *open_with_ext(const char *filename, const char *extension, const char *mod
   return file;
 }
 
+int remove_file(const char *filename, const char *extension, const char *error_desc) {
+  char *filepath = with_ext(filename, extension);
+
+  if (remove(filepath) != 0) {
+    printf("WARNING: Failed to delete %s: '%s'\n", error_desc, filepath);
+    return false;
+  };
+
+  return true;
+}
+
+int file_is_empty(const char *filename, const char *extension, const char *error_desc) {
+  FILE *file = open_with_ext(filename, extension, "r", error_desc);
+
+  if (file == NULL) /* If a file can't be opened we assume it isn't empty */
+    return false;
+
+  /* Go to end of file and check if the position is zero */
+  fseek(file, 0, SEEK_END);
+  if (ftell(file) == 0)
+    return true;
+  return false;
+}
+
 int scan_number(char *text, int *out) {
   int is_negative = false;
   *out = 0;

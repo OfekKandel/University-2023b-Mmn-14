@@ -55,6 +55,11 @@ FILE *open_with_ext(const char *filename, const char *extension, const char *mod
                     const char *error_desc);
 
 /* [DOCS NEEDED] */
+int remove_file(const char *filename, const char *extension, const char *error_desc);
+/* [DOCS NEEDED] */
+int file_is_empty(const char *filename, const char *extension, const char *error_desc);
+
+/* [DOCS NEEDED] */
 int scan_argument(char content[], char separator);
 /* [DOCS NEEDED] */
 int scan_string(char content[]);

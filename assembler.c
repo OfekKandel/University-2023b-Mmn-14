@@ -67,13 +67,11 @@ static int add_data_argument(char *content, BinaryTable *data_table, SymbolTable
     return -1;
   }
   if (res == -2) {
-    printf("ERROR: Two arguments in a data instruction must be separated by a "
-           "comma\n");
+    printf("ERROR: Two arguments in a data instruction must be separated by a comma\n");
     return -1;
   }
   if (res == -3) {
-    printf("ERROR: Two consecutive commas between arguments in data "
-           "instruction\n");
+    printf("ERROR: Two consecutive commas between arguments in data instruction\n");
     return -1;
   }
   if (res == -4) {
@@ -479,8 +477,8 @@ static void write_ob_file(FILE *ob_file, BinaryTable data_table, BinaryTable ins
   printf("DEBUG: End of write_ob_file\n");
 }
 
-/* [DOCS NEEDED] */
-static void read_file(FILE *src_file, FILE *ob_file, FILE *ent_file, FILE *ext_file) {
+/* [DOCS NEEDED] return true on success */
+static int read_file(FILE *src_file, FILE *ob_file, FILE *ent_file, FILE *ext_file) {
   SymbolTable symbol_table;
   BinaryTable data_table, instruction_table;
   symbol_table.head = NULL;
@@ -493,7 +491,7 @@ static void read_file(FILE *src_file, FILE *ob_file, FILE *ent_file, FILE *ext_f
   if (!first_pass(src_file, &symbol_table, &instruction_table, &data_table)) {
     printf("DEBUG: First pass failed\n");
     free_tables(symbol_table, data_table, instruction_table);
-    return;
+    return false;
   }
   printf("DEBUG: Finished first pass\n");
 
@@ -501,7 +499,7 @@ static void read_file(FILE *src_file, FILE *ob_file, FILE *ent_file, FILE *ext_f
   if (!second_pass(&symbol_table, &instruction_table, &data_table)) {
     printf("DEBUG: Second pass failed");
     free_tables(symbol_table, data_table, instruction_table);
-    return;
+    return false;
   }
   printf("DEBUG: Finished second pass\n");
 
@@ -515,13 +513,15 @@ static void read_file(FILE *src_file, FILE *ob_file, FILE *ent_file, FILE *ext_f
   /* Write output files */
   write_ob_file(ob_file, data_table, instruction_table);
 
-  /* Free tables and close files */
+  /* Free tables */
   free_tables(symbol_table, data_table, instruction_table);
-  fclose(ob_file);
+
+  return true;
 }
 
 int assemble_file(char *filename, char *suffix) {
   FILE *src_file, *ob_file, *ent_file, *ext_file;
+  int success;
 
   /* Open files and return on error */
   src_file = open_with_ext(filename, suffix, "r", "assembly source file");
@@ -531,12 +531,21 @@ int assemble_file(char *filename, char *suffix) {
   if (!src_file || !ob_file || !ent_file || !ext_file) return false;
 
   /* Process file */
-  read_file(src_file, ob_file, ent_file, ext_file);
+  success = read_file(src_file, ob_file, ent_file, ext_file);
 
   /* Close files */
   fclose(src_file);
   fclose(ob_file);
   fclose(ent_file);
   fclose(ext_file);
+
+  /* Delete all output files on fail, else delete only the empty ones */
+  if (!success || file_is_empty(filename, OBJECT_FILE_SUFFIX, "object output file (cleanup)"))
+    remove_file(filename, OBJECT_FILE_SUFFIX, "object output file (cleanup)");
+  if (!success || file_is_empty(filename, ENTRIES_FILE_SUFFIX, "entries output file (cleanup)"))
+    remove_file(filename, ENTRIES_FILE_SUFFIX, "entries output file (cleanup)");
+  if (!success || file_is_empty(filename, EXTERNALS_FILE_SUFFIX, "externals output file (cleanup)"))
+    remove_file(filename, EXTERNALS_FILE_SUFFIX, "externals output file (cleanup)");
+
   return true;
 }

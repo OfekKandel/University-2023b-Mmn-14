@@ -16,13 +16,11 @@ static char *read_macro_declaration(char *line) {
 
   /* Check if the line's first word is 'mcr' */
   line = skip_space(line);
-  if (strncmp(line, MACRO_KEYWORD, strlen(MACRO_KEYWORD)) != 0)
-    return NULL;
+  if (strncmp(line, MACRO_KEYWORD, strlen(MACRO_KEYWORD)) != 0) return NULL;
 
   /* Check that mcr is followed by space */
   line += strlen(MACRO_KEYWORD);
-  if (!isspace(line[0]))
-    return NULL;
+  if (!isspace(line[0])) return NULL;
 
   /* Check that there is a macro name after mcr */
   line = skip_space(line);
@@ -49,8 +47,7 @@ static char *read_macro_declaration(char *line) {
 static int read_macro_termination(char *line) {
   /* Check if the line's first word is 'endmcr' */
   line = skip_space(line);
-  if (strncmp(line, END_MACRO_KEYWORD, strlen(END_MACRO_KEYWORD)) != 0)
-    return false;
+  if (strncmp(line, END_MACRO_KEYWORD, strlen(END_MACRO_KEYWORD)) != 0) return false;
 
   /* Check that there is no extraneous text */
   line += strlen(END_MACRO_KEYWORD);
@@ -79,13 +76,11 @@ static MacroLines *read_macro_invocation(MacroTable *table, char *line) {
   lines_found = get_macro_lines(table, mcr_name);
   line[0] = original_char;
 
-  if (!lines_found)
-    return NULL;
+  if (!lines_found) return NULL;
 
   /* Check that there is no extraneous text */
   line = skip_space(line);
-  if (!is_terminator(line[0]))
-    printf("ERROR: Extraneous text after macro invocation\n");
+  if (!is_terminator(line[0])) printf("ERROR: Extraneous text after macro invocation\n");
 
   return lines_found;
 }
@@ -99,8 +94,7 @@ static void write_macro_invocation(MacroLines *invoked_mcr, FILE *out_file) {
 }
 
 /* [DOCS NEEDED] returns whether a new file was created */
-static bool read_file(FILE *src_file, const char *src_path, FILE *out_file,
-                      const char *out_path) {
+static bool read_file(FILE *src_file, const char *src_path, FILE *out_file, const char *out_path) {
   char line[MAX_LINE_LEN + 1], *mcr_name;
   int n_line = 1;
   MacroLines *active_mcr = NULL, *invoked_mcr;
@@ -110,8 +104,7 @@ static bool read_file(FILE *src_file, const char *src_path, FILE *out_file,
   while (fgets(line, sizeof(line), src_file) != NULL) {
     /* Check that line is under 80 chars */
     if (line[strlen(line) - 1] != '\n') {
-      printf("ERROR [%s - Line %d]: Line with over 80 characters found\n",
-             src_path, n_line);
+      printf("ERROR [%s - Line %d]: Line with over 80 characters found\n", src_path, n_line);
     }
 
     /* TODO: Clean this loop */
@@ -145,8 +138,8 @@ static bool read_file(FILE *src_file, const char *src_path, FILE *out_file,
   /* Remove .am file if no macros exist */
   if (table.head == NULL) {
     if (remove(out_path) != 0)
-      printf("WARNING: Failed to delete preprocessor out file %s (not needed "
-             "because no macros were found)\n",
+      printf("WARNING: Failed to delete preprocessor out file %s (not needed because no macros "
+             "were found)\n",
              out_path);
     free_macro_table(table);
     return false;
@@ -167,8 +160,7 @@ int process_file(char *filename) {
   src_file_path = with_ext(filename, ".as");
   src_file = fopen(src_file_path, "r");
   if (src_file == NULL) {
-    printf("ERROR [preprocessor]: Failed to open assembly source file '%s'\n",
-           src_file_path);
+    printf("ERROR [preprocessor]: Failed to open assembly source file '%s'\n", src_file_path);
     return -1;
   }
 
@@ -176,8 +168,7 @@ int process_file(char *filename) {
   out_file_path = with_ext(filename, PROCESSED_FILE_SUFFIX);
   out_file = fopen(out_file_path, "w");
   if (out_file == NULL) {
-    printf("ERROR [preprocessor]: Failed to open assembly output file '%s'\n",
-           out_file_path);
+    printf("ERROR [preprocessor]: Failed to open assembly output file '%s'\n", out_file_path);
     return -1;
   }
 
