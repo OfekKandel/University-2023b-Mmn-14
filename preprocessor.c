@@ -107,20 +107,21 @@ static bool read_file(FILE *src_file, const char *src_path, FILE *out_file, cons
       printf("ERROR [%s - Line %d]: Line with over 80 characters found\n", src_path, n_line);
     }
 
-    /* TODO: Clean this loop */
-
     if (active_mcr != NULL) {
+      /* If there is an active macro scan check if its over */
       if (read_macro_termination(line))
         active_mcr = NULL;
-      else
+      else /* Else simply add the line to the macro */
         append_line(active_mcr, line);
     } else {
+      /* Check if there is a macro starting line */
       mcr_name = read_macro_declaration(line);
       if (mcr_name) {
+        /* If there is add it to the table (and start scanning) */
         /* TODO: Check that macro is not a saved word */
-        printf("DEBUG: Adding macro |%s|\n", mcr_name);
         active_mcr = insert_macro(&table, mcr_name);
       } else {
+        /* Else check if a macro is being invoked */
         invoked_mcr = read_macro_invocation(&table, line);
         if (invoked_mcr) {
           write_macro_invocation(invoked_mcr, out_file);
