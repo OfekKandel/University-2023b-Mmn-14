@@ -258,7 +258,7 @@ static int encode_array_index_arg(char *arg, BinaryTable *instruction_table,
   index_word.are = 0;
 
   index_str = scan_array_index(arg);
-  if (index_str == NULL) return -1;
+  if (index_str == NULL) return false;
 
   /* Add word for the array symbol */
   append_symbol_word(instruction_table, arg);
@@ -315,6 +315,7 @@ static int add_arg_word(char *arg, int adressing_mode, BinaryTable *instruction_
 /* [DOCS NEEDED] */
 static int add_command(CommandLine line, BinaryTable *instruction_table,
                        SymbolTable *symbol_table) {
+  int successful = true;
   BinaryWord word;
   CommandFirstWord first_word;
   first_word.are = 0; /* ARE is always 0 in first word */
@@ -350,6 +351,7 @@ static int add_command(CommandLine line, BinaryTable *instruction_table,
     return false;
   }
 
+  /* TODO: Create encoding file? (only for writing all the files) */
   /* Add first word to instruction table */
   word = first_word_to_binary(first_word);
   append_word(instruction_table, word);
@@ -360,7 +362,8 @@ static int add_command(CommandLine line, BinaryTable *instruction_table,
       encode_registers(instruction_table, line.src_arg,
                        (first_word.dest_adressing == 3) ? line.dest_arg : NULL);
     else
-      add_arg_word(line.src_arg, first_word.src_adressing, instruction_table, symbol_table);
+      successful = successful && add_arg_word(line.src_arg, first_word.src_adressing,
+                                              instruction_table, symbol_table);
   }
 
   /* Add destination argument word to instruction table */
@@ -369,10 +372,11 @@ static int add_command(CommandLine line, BinaryTable *instruction_table,
     if (first_word.src_adressing != 3 && first_word.dest_adressing == 3)
       encode_registers(instruction_table, NULL, line.dest_arg);
     else
-      add_arg_word(line.dest_arg, first_word.dest_adressing, instruction_table, symbol_table);
+      successful = successful && add_arg_word(line.dest_arg, first_word.dest_adressing,
+                                              instruction_table, symbol_table);
   }
 
-  return true;
+  return successful;
 }
 
 /* [DOCS NEEDED] returns whether the line was parsed successfully */
@@ -422,7 +426,8 @@ static void print_bin_table(BinaryTable *table) {
 static void print_sym_table(SymbolTable *table) {
   SymbolTableNode *iter;
   for (iter = table->head; iter != NULL; iter = iter->next) {
-    printf("DEBUG:\t %s \t| %c | %d\n", iter->name, iter->type, iter->value);
+    printf("DEBUG:\t %s \t| %c | %d | %d\n", iter->name, iter->type, iter->linker_flag,
+           iter->value);
   }
 }
 
@@ -445,6 +450,28 @@ static int first_pass(FILE *src_file, SymbolTable *symbol_table, BinaryTable *in
   return succesful;
 }
 
+static int create_ent_file(SymbolTable *symbol_table, FILE *ent_file) {
+  SymbolTableNode *iter;
+  int successful = true;
+
+  for (iter = symbol_table->head; iter != NULL; iter = iter->next) {
+    if (iter->linker_flag != 1) continue; /* skip symbols not marked entry */
+
+    /* Print error continue if the symbol wasn't filled in */
+    if (iter->type == 'x') {
+      printf("ERROR: Symbol marked .entry not found in file\n");
+      successful = false;
+      continue;
+    }
+
+    /* Add it to the .ent file */
+    fprintf(ent_file, "%s\t%04d \n", iter->name, iter->value);
+  }
+
+  return successful;
+}
+
+/* [DOCS NEEDED] */
 static int second_pass(SymbolTable *symbol_table, BinaryTable *instruction_table,
                        BinaryTable *data_table, FILE *ent_file, FILE *ext_file) {
   BinaryTableNode *iter;
@@ -454,6 +481,7 @@ static int second_pass(SymbolTable *symbol_table, BinaryTable *instruction_table
 
   for (iter = instruction_table->head; iter != NULL; iter = iter->next, word_num++) {
     if (iter->symbol == NULL) continue;
+
     symbol = search_symbol(symbol_table, iter->symbol);
     if (symbol == NULL) {
       printf("ERROR: Usage of undeclared symbol '%s'", iter->symbol);
@@ -472,9 +500,13 @@ static int second_pass(SymbolTable *symbol_table, BinaryTable *instruction_table
     iter->content.content = 2 | (symbol->value << 2);
   }
 
+  /* Create the .ent file from the symbol table */
+  if (!create_ent_file(symbol_table, ent_file)) succesful = false;
+
   return succesful;
 }
 
+/* [DOCS NEEDED] */
 static void free_tables(SymbolTable symbol_table, BinaryTable data_table,
                         BinaryTable instruction_table) {
   free_symbol_table(symbol_table);
