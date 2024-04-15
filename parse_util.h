@@ -42,36 +42,42 @@ typedef struct ParsedLine {
   } content;
 } ParsedLine;
 
+/* Main parsing function -------------- */
+
 /* [DOCS NEEDED] */
 ParsedLine parse_line(char line[MAX_LINE_LEN]);
+
+/* Argument parsing functions ------------- */
+
+/* [DOCS NEEDED] should be called without leading space, return meaning: >0 - skip distance to next
+ * argument, | -1 - Missing first argument (starts with the separator) | -2 - Missing separator
+ * between arguments | -3 - two consecutive separators between arguments | -4 - trailing separator
+ * after arguments (no next argument) | -5 - no argument at all (only empty space)*/
+int scan_argument(char content[], char separator);
+/* [DOCS NEEDED] */
+int scan_string(char content[]);
+/* [DOCS NEEDED] returns true if the text not a valid number */
+int scan_number(char *text, int *out);
+/* [DOCS NEEDED] returns a string containing the index/constant's name, NULL on error, the array
+ * symbol will be terminated, meaning the given content argument can be used to access it */
+char *scan_array_index(char content[]);
+
+/* File functions ----------- */
 
 /* Given a filename (with no extension) and an extension, adds the extension to
  * the filename. Returns the new filename, memory returned by this function must
  * be freed) */
 char *with_ext(const char *filename, const char *extension);
-
 /* [DOCS NEEDED] */
 FILE *open_with_ext(const char *filename, const char *extension, const char *mode,
                     const char *error_desc);
-
 /* [DOCS NEEDED] */
 int remove_file(const char *filename, const char *extension, const char *error_desc);
 /* [DOCS NEEDED] */
-int file_is_empty(const char *filename, const char *extension, const char *error_desc);
+int is_file_empty(const char *filename, const char *extension, const char *error_desc);
 
-/* [DOCS NEEDED] */
-int scan_argument(char content[], char separator);
-/* [DOCS NEEDED] */
-int scan_string(char content[]);
+/* Smaller parsing functions --------------- */
 
-/* [DOCS NEEDED] returns a string containing the index/constant's name, NULL on error, the array
- * symbol will be terminated, meaning the given content argument can be used to access it */
-char *scan_array_index(char content[]);
-
-/* Smaller functions */
-
-/* [DOCS NEEDED] returns true if the text not a valid number */
-int scan_number(char *text, int *out);
 /* [DOCS NEEDED] return whether a given string is a register name */
 int is_register_name(char *arg);
 /* Return a pointer to the next position that isn't a letter in a string */

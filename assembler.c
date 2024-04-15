@@ -385,6 +385,7 @@ static int first_pass_line(char *line, SymbolTable *symbol_table, BinaryTable *i
   ParsedLine parsed_line = parse_line(line);
   switch (parsed_line.line_type) {
   case Error:
+    return false;
   case Empty:
   case Comment:
     break;
@@ -477,15 +478,16 @@ static int second_pass(SymbolTable *symbol_table, BinaryTable *instruction_table
   BinaryTableNode *iter;
   SymbolTableNode *symbol;
   bool succesful = true;
-  int word_num = 0;
+  int word_num = 100;
 
   for (iter = instruction_table->head; iter != NULL; iter = iter->next, word_num++) {
     if (iter->symbol == NULL) continue;
 
     symbol = search_symbol(symbol_table, iter->symbol);
     if (symbol == NULL) {
-      printf("ERROR: Usage of undeclared symbol '%s'", iter->symbol);
+      printf("ERROR: Usage of undeclared symbol '%s'\n", iter->symbol);
       succesful = false;
+      continue;
     }
     iter->symbol = NULL;
 
@@ -558,7 +560,7 @@ static int read_file(FILE *src_file, FILE *ob_file, FILE *ent_file, FILE *ext_fi
 
   /* Perform second pass, return if failed */
   if (!second_pass(&symbol_table, &instruction_table, &data_table, ent_file, ext_file)) {
-    printf("DEBUG: Second pass failed");
+    printf("DEBUG: Second pass failed\n");
     free_tables(symbol_table, data_table, instruction_table);
     return false;
   }
@@ -601,11 +603,11 @@ int assemble_file(char *filename, char *suffix) {
   fclose(ext_file);
 
   /* Delete all output files on fail, else delete only the empty ones */
-  if (!success || file_is_empty(filename, OBJECT_FILE_SUFFIX, "object output file (cleanup)"))
+  if (!success || is_file_empty(filename, OBJECT_FILE_SUFFIX, "object output file (cleanup)"))
     remove_file(filename, OBJECT_FILE_SUFFIX, "object output file (cleanup)");
-  if (!success || file_is_empty(filename, ENTRIES_FILE_SUFFIX, "entries output file (cleanup)"))
+  if (!success || is_file_empty(filename, ENTRIES_FILE_SUFFIX, "entries output file (cleanup)"))
     remove_file(filename, ENTRIES_FILE_SUFFIX, "entries output file (cleanup)");
-  if (!success || file_is_empty(filename, EXTERNALS_FILE_SUFFIX, "externals output file (cleanup)"))
+  if (!success || is_file_empty(filename, EXTERNALS_FILE_SUFFIX, "externals output file (cleanup)"))
     remove_file(filename, EXTERNALS_FILE_SUFFIX, "externals output file (cleanup)");
 
   return true;

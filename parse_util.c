@@ -45,7 +45,7 @@ static LineType get_line_content_type(char content[]) {
   /* Skip space */
   content = skip_space(content);
 
-  /* Check if its not a dot-command */
+  /* Return Command if its not a dot-command */
   if (content[0] != '.') return Command;
 
   /* Scan first word (without dot)*/
@@ -53,56 +53,11 @@ static LineType get_line_content_type(char content[]) {
   content = skip_to_space(content);
   content[0] = '\0';
 
-  /* Check against if its a define command */
+  /* Return Define if its a define command */
   if (strcmp(word, "define") == 0) return Define;
 
+  /* Else its a dot-instruction */
   return DotInstruction;
-}
-
-/* [DOCS NEEDED] scans current argument until a separator, returns the address
- * where the separator *should* be, if there is a following separator this will
- * be the separator, if there was no separator it will be a some other
- * character, if there is no text at all after the argument it will be a
- * terminator */
-/* TODO: Replace usage of this with scan_argument */
-static char *scan_to_separator(char content[], char separator) {
-  /* Scan argument */
-  while (content[0] != separator && !is_terminator(content[0]) && !isspace(content[0]))
-    content++;
-
-  /* Terminate argument and continue to separator if there was space */
-  if (isspace(content[0])) {
-    content[0] = '\0';
-    content = skip_space(++content);
-  }
-
-  /* Terminate argument properly as long as there is some terminator there */
-  if (is_terminator(content[0])) content[0] = '\0';
-
-  return content;
-}
-
-/* [DOCS NEEDED] returns address to next argument if there is one, NULL if there
- * is no separator and there's another argument, a terminator if there is
- * no text after the argument, or after the separator (while a little strange,
- * this is convenient for the different cases of error handling)*/
-/* TODO: Replace usage of this with scan_argument */
-static char *scan_argument_and_separator(char content[], char separator) {
-  /* Scan until the separator (as described in function docs) */
-  content = scan_to_separator(content, separator);
-
-  /* Return a terminator if there is no text after the argument */
-  if (is_terminator(content[0])) return content;
-
-  /* Return NULL if there is no following separator */
-  if (content[0] != separator) return NULL;
-
-  /* Terminate argument at separator and skip to the next one */
-  content[0] = '\0';
-  content = skip_space(++content);
-
-  /* Return the next argument (could be terminator, or separator, as well) */
-  return content;
 }
 
 int scan_argument(char content[], char separator) {
@@ -145,98 +100,65 @@ int scan_argument(char content[], char separator) {
   return content - start;
 }
 
-int scan_string(char content[]) {
-  char *init = content;
-  char *str_start;
-
-  /* Return error if there is no content */
-  if (content == NULL) return -1; /* -1: No string */
-
-  /* Skip space */
-  content = skip_space(content);
-
-  /* Return error if there is no string */
-  if (is_terminator(content[0])) return -1; /* -1: No string (only space) */
-
-  /* Return error if a quotation mark is missing */
-  if (content[0] != '"') return -2; /* -2: Missing opening quotation mark */
-  str_start = ++content;
-
-  /* Progress until next quotation mark */
-  while (content[0] != '"' && !is_terminator(content[0]))
-    content++;
-
-  /* Return error if there is no closing quotation mark  */
-  if (is_terminator(content[0])) return -3; /* -3: Missing closing quotation mark */
-
-  /* Terminate word where the separator is and skip following space */
-  content[0] = '\0';
-  content = skip_space(++content);
-
-  /* Return error if there is text after the string */
-  content = skip_space(content);
-  if (!is_terminator(content[0])) return -4; /* -4: Extraneous text after string declaration */
-
-  /* Return number of chars to skip to start of string */
-  return str_start - init;
-}
-
 /* [DOCS NEEDED] */
 static void scan_define(char content[], ParsedLine *out) {
   char *word;
+  int scan_result;
 
-  /* Print warning if there is a label */
-  if (out->content.command.label != NULL)
-    printf("ERROR: A label is meaningless before a constant defenition and is "
-           "not allowed\n");
+  /* Print error and return if there is a label */
+  if (out->content.command.label != NULL) {
+    printf("ERROR: A label is meaningless before a constant defenition and is not allowed\n");
+    out->line_type = Error;
+    return;
+  }
 
   /* Skip space, ".define" word, and following space */
   content = skip_space(content);
   content += strlen(".define") + 1;
   content = skip_space(content);
 
-  /* Print error if there is no argument */
-  if (is_terminator(content[0]) || content[0] == '=') {
-    printf("ERROR: Missing argument(s) in constant defenition\n");
-    out->line_type = Error;
-    return;
-  }
-
-  /* Scan first argument (and handle error) */
+  /* Scan first argument */
   word = content;
-  content = scan_argument_and_separator(content, '=');
+  scan_result = scan_argument(content, '=');
 
-  /* Print error if there is no = sign */
-  if (content == NULL) {
-    printf("ERROR: Missing '=' sign in constant defenition\n");
+  /* Handle errors */
+  if (scan_result <= 0) {
+    switch (scan_result) {
+    case 0:  /* No text after argument */
+    case -1: /* No text */
+    case -5: /* No argument */
+    case -4: /* Trailing = */
+      printf("ERROR: Missing argument in constant defenition\n");
+      break;
+    case -2: /* Missing = */
+    case -3: /* Double = */
+      printf("ERROR: In a constant defenition, the constant and value are seperated by a signle "
+             "'=' sign \n");
+      break;
+    }
     out->line_type = Error;
     return;
   }
-
-  /* Print error if there is no second argument */
-  if (is_terminator(content[0])) {
-    printf("ERROR: Missing second argument in constant defenition\n");
-    out->line_type = Error;
-    return;
-  }
-
-  out->content.define.name = word;
 
   /* Scan second argument */
+  out->content.define.name = word;
+  content += scan_result;
   word = content;
-  content = scan_to_separator(content, '=');
-  out->content.define.value = word;
+  scan_result = scan_argument(content, '=');
 
-  /* Print error if there is extraneous text */
-  if (!is_terminator(content[0])) {
+  if (scan_result != 0) {
+    /* Note: the only case where scan_result != 0 is when there is extra text of some kind */
     printf("ERROR: Extraneous text after constant defenition\n");
     out->line_type = Error;
     return;
   }
+
+  out->content.define.value = word;
 }
 
 static void scan_command(char content[], ParsedLine *out) {
   char *word;
+  int scan_result;
 
   /* Scan command name */
   content = skip_space(content);
@@ -252,62 +174,52 @@ static void scan_command(char content[], ParsedLine *out) {
 
   content[0] = '\0';
   out->content.command.cmd = word;
+
+  /* Scan first argument */
   content = skip_space(++content);
+  word = content;
+  scan_result = scan_argument(content, ',');
 
-  /* If there's no first argument return */
-  if (is_terminator(content[0])) return;
-
-  /* Print error if there is a comma but no argument */
-  if (content[0] == ',') {
-    printf("ERROR: Missing argument in command invocation\n");
+  if (scan_result < 0) {
+    switch (scan_result) {
+    case -5: /* Return on no arguments (no text)*/
+      return;
+    case -1: /* No argument */
+      printf("ERROR: Missing first argument of command invocation\n");
+      break;
+    case -2: /* Missing , */
+    case -3: /* Double , */
+      printf("ERROR: Arguments in command invocation are seperated by a signle comma\n");
+      break;
+    case -4: /* Trailing , */
+      printf("ERROR: Missing second argument in command invocation\n");
+      break;
+    }
     out->line_type = Error;
     return;
   }
 
-  /* Scan first argument (and handle error) */
-  word = content;
-  content = scan_to_separator(content, ',');
+  out->content.command.dest_arg = word;
 
   /* Return if there is only one argument */
-  if (is_terminator(content[0])) {
-    content[0] = '\0';
-    out->content.command.dest_arg = word;
-    return;
-  }
-
-  /* Print error if there is no comma */
-  if (content[0] != ',') {
-    printf("ERROR: Missing comma in command invocation\n");
-    out->line_type = Error;
-    return;
-  }
-
-  /* Terminate word and skip to next argument */
-  content[0] = '\0';
-  out->content.command.dest_arg = word;
-  content = skip_space(++content);
-
-  /* Print error if there is no second argument */
-  if (is_terminator(content[0])) {
-    printf("ERROR: Missing second argument in command invocation\n");
-    out->line_type = Error;
-    return;
-  }
+  if (scan_result == 0) return;
 
   /* Scan second argument */
+  content += scan_result;
   word = content;
-  content = scan_to_separator(content, ',');
+  scan_result = scan_argument(content, ',');
 
-  /* Set first argument to be source and second to be destination */
-  out->content.command.src_arg = out->content.command.dest_arg;
-  out->content.command.dest_arg = word;
-
-  /* Print error if there is extraneous text */
-  if (!is_terminator(content[0])) {
+  /* Print error and return if there is extraneous text */
+  if (scan_result != 0) {
+    /* Note: the only case where scan_result != 0 is when there is extra text of some kind */
     printf("ERROR: Extraneous text after command invocation\n");
     out->line_type = Error;
     return;
   }
+
+  /* Set first argument to be source and second to be destination */
+  out->content.command.src_arg = out->content.command.dest_arg;
+  out->content.command.dest_arg = word;
 }
 
 /* [DOCS NEEDED] */
@@ -341,10 +253,13 @@ static void scan_dot_instruction(char content[], ParsedLine *out) {
   out->content.dot_instruction.args_start = content;
 }
 
+/* Main parsing function -------------- */
+
 ParsedLine parse_line(char line[MAX_LINE_LEN]) {
   ParsedLine out;
   char *label;
 
+  /* Set everything to 0/NULL for convenience */
   memset(&out, 0, sizeof(ParsedLine));
 
   /* Skip space */
@@ -371,8 +286,6 @@ ParsedLine parse_line(char line[MAX_LINE_LEN]) {
   /* Parse rest of command by type */
   out.line_type = get_line_content_type(line);
   switch (out.line_type) {
-  case Error: /* Exit on error */
-    return out;
   case Define:
     scan_define(line, &out);
     break;
@@ -382,13 +295,15 @@ ParsedLine parse_line(char line[MAX_LINE_LEN]) {
   case Command:
     scan_command(line, &out);
     break;
-  default: /* Can't happen, but compiler complains */
-    break;
+  default: /* Exit on error (comment/empty already handled) */
+    return out;
   }
 
   /* Return */
   return out;
 }
+
+/* File functions ----------- */
 
 char *with_ext(const char *filename, const char *extension) {
   /* Allocate correctly sized buffer for the new filename */
@@ -428,7 +343,7 @@ int remove_file(const char *filename, const char *extension, const char *error_d
   return true;
 }
 
-int file_is_empty(const char *filename, const char *extension, const char *error_desc) {
+int is_file_empty(const char *filename, const char *extension, const char *error_desc) {
   FILE *file = open_with_ext(filename, extension, "r", error_desc);
 
   if (file == NULL) /* If a file can't be opened we assume it isn't empty */
@@ -436,9 +351,46 @@ int file_is_empty(const char *filename, const char *extension, const char *error
 
   /* Go to end of file and check if the position is zero */
   fseek(file, 0, SEEK_END);
-  if (ftell(file) == 0)
-    return true;
+  if (ftell(file) == 0) return true;
   return false;
+}
+
+/* General parsing functions ------------- */
+
+int scan_string(char content[]) {
+  char *init = content;
+  char *str_start;
+
+  /* Return error if there is no content */
+  if (content == NULL) return -1; /* -1: No string */
+
+  /* Skip space */
+  content = skip_space(content);
+
+  /* Return error if there is no string */
+  if (is_terminator(content[0])) return -1; /* -1: No string (only space) */
+
+  /* Return error if a quotation mark is missing */
+  if (content[0] != '"') return -2; /* -2: Missing opening quotation mark */
+  str_start = ++content;
+
+  /* Progress until next quotation mark */
+  while (content[0] != '"' && !is_terminator(content[0]))
+    content++;
+
+  /* Return error if there is no closing quotation mark  */
+  if (is_terminator(content[0])) return -3; /* -3: Missing closing quotation mark */
+
+  /* Terminate word where the separator is and skip following space */
+  content[0] = '\0';
+  content = skip_space(++content);
+
+  /* Return error if there is text after the string */
+  content = skip_space(content);
+  if (!is_terminator(content[0])) return -4; /* -4: Extraneous text after string declaration */
+
+  /* Return number of chars to skip to start of string */
+  return str_start - init;
 }
 
 int scan_number(char *text, int *out) {
@@ -506,6 +458,8 @@ char *scan_array_index(char content[]) {
 
   return index;
 }
+
+/* Smaller parsing functions --------------- */
 
 int is_register_name(char *arg) {
   /* Matches argument of form r0 to r7 */
