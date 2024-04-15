@@ -122,19 +122,19 @@ static int add_string_instruction(DotInstructionLine line, BinaryTable *data_tab
   /* TODO: Better as switch? Better to extract the return? */
   if (res == -1) {
     printf("ERROR: No string given in .string instruction\n");
-    return -1;
+    return false;
   }
   if (res == -2) {
     printf("ERROR: Missing starting quotation mark in string instruction\n");
-    return -1;
+    return false;
   }
   if (res == -2) {
     printf("ERROR: Missing ending quotation mark in string instruction\n");
-    return -1;
+    return false;
   }
   if (res == -4) {
     printf("ERROR: Extraneous text after string instruction\n");
-    return -1;
+    return false;
   }
   content += res;
 
@@ -149,6 +149,21 @@ static int add_string_instruction(DotInstructionLine line, BinaryTable *data_tab
   return true;
 }
 
+/* [DOCS NEEDED] flag: 1 - entry 2 - extern */
+static int add_ent_ext_instruction(DotInstructionLine line, SymbolTable *symbol_table, int flag) {
+  char *argument = line.args_start;
+  int res = scan_argument(argument, ','); /* Separator only matters in error cases here */
+
+  /* Print error and return if there is more than one argument */
+  if (res != 0) {
+    printf("ERROR: .%s instruction takes one argument\n", line.name);
+    return false;
+  }
+
+  /* Mark symbol */
+  return mark_symbol(symbol_table, argument, flag);
+}
+
 /* [DOCS NEEDED] */
 static int add_dot_instruction(DotInstructionLine line, BinaryTable *data_table,
                                SymbolTable *symbol_table) {
@@ -158,8 +173,12 @@ static int add_dot_instruction(DotInstructionLine line, BinaryTable *data_table,
   if (strcmp(line.name, "string") == 0) {
     return add_string_instruction(line, data_table, symbol_table);
   }
-
-  /* TODO: Implement other dot instructions */
+  if (strcmp(line.name, "entry") == 0) {
+    return add_ent_ext_instruction(line, symbol_table, 1);
+  }
+  if (strcmp(line.name, "extern") == 0) {
+    return add_ent_ext_instruction(line, symbol_table, 2);
+  }
 
   printf("ERROR: Unkown dot instruction name: '%s'\n", line.name);
   return false;
@@ -427,12 +446,13 @@ static int first_pass(FILE *src_file, SymbolTable *symbol_table, BinaryTable *in
 }
 
 static int second_pass(SymbolTable *symbol_table, BinaryTable *instruction_table,
-                       BinaryTable *data_table) {
+                       BinaryTable *data_table, FILE *ent_file, FILE *ext_file) {
   BinaryTableNode *iter;
   SymbolTableNode *symbol;
   bool succesful = true;
+  int word_num = 0;
 
-  for (iter = instruction_table->head; iter != NULL; iter = iter->next) {
+  for (iter = instruction_table->head; iter != NULL; iter = iter->next, word_num++) {
     if (iter->symbol == NULL) continue;
     symbol = search_symbol(symbol_table, iter->symbol);
     if (symbol == NULL) {
@@ -440,7 +460,15 @@ static int second_pass(SymbolTable *symbol_table, BinaryTable *instruction_table
       succesful = false;
     }
     iter->symbol = NULL;
-    /* TODO: Add support for external here, as this sets ARE to 2 (10) */
+
+    /* If symbol is external then set the ARE and add it to the ext file */
+    if (symbol->linker_flag == 2) {
+      fprintf(ext_file, "%s\t%04d \n", symbol->name, word_num);
+      iter->content.content = 1; /* Sets ARE to 1 and rest (the value) to 0 */
+      continue;
+    }
+
+    /* Else just set its value normally */
     iter->content.content = 2 | (symbol->value << 2);
   }
 
@@ -464,6 +492,7 @@ static void write_ob_file(FILE *ob_file, BinaryTable data_table, BinaryTable ins
 
   /* Write instructions */
   for (iter = instruction_table.head; iter != NULL; iter = iter->next, word_num++) {
+    /* TODO: Extract internals to parse_util? */
     get_encoded_word(iter->content, encoding_buff);
     fprintf(ob_file, "%04d %s\n", word_num, encoding_buff);
   }
@@ -496,7 +525,7 @@ static int read_file(FILE *src_file, FILE *ob_file, FILE *ent_file, FILE *ext_fi
   printf("DEBUG: Finished first pass\n");
 
   /* Perform second pass, return if failed */
-  if (!second_pass(&symbol_table, &instruction_table, &data_table)) {
+  if (!second_pass(&symbol_table, &instruction_table, &data_table, ent_file, ext_file)) {
     printf("DEBUG: Second pass failed");
     free_tables(symbol_table, data_table, instruction_table);
     return false;

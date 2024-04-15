@@ -5,16 +5,20 @@ typedef struct SymbolTableNode {
   char *name;
   char type;
   int value;
+  int linker_flag; /* 0 - None, 1 - Entry, 2 - External */
   struct SymbolTableNode *next;
-} SymbolTableNode ;
+} SymbolTableNode;
 
 typedef struct SymbolTable {
   SymbolTableNode *head;
 } SymbolTable;
 
-
-/* [DOCS NEEDED] returns false if the symbol was already in the table, else true */
+/* [DOCS NEEDED] returns false if the symbol was already in the table but wasn't marked
+ * to-be-filled-in, else true */
 int append_symbol(SymbolTable *table, char *name, char type, int value);
+
+/* [DOCS NEEDED] returns false on error */
+int mark_symbol(SymbolTable *table, char *name, int flag);
 
 /* [DOCS NEEDED] returns NULL if no symbol was found */
 SymbolTableNode *search_symbol(SymbolTable *table, char *name);
