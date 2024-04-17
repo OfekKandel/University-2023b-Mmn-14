@@ -7,12 +7,20 @@
 #include <stdlib.h>
 #include <string.h>
 
-int scan_argument(char content[], char separator) {
+ScanArgumentResult scan_argument(char content[], char separator) {
   char *start = content;
+  ScanArgumentResult res;
+  res.status = ArgumentScanShouldSkip;
 
   /* Return errors if there is no argument */
-  if (content == NULL || is_terminator(content[0])) return -5; /* -5: No argument (only space) */
-  if (content[0] == separator) return -1; /* -1: Missing first argument (starts with separator) */
+  if (content == NULL || is_terminator(content[0])) {
+    res.status = ArgumentScanNoContent;
+    return res;
+  }
+  if (content[0] == separator) {
+    res.status = MissingFirstArg;
+    return res;
+  }
 
   /* Progress until space/separator/terminator (this is where the argument is)*/
   while (!isspace(content[0]) && content[0] != separator && !is_terminator(content[0]))
@@ -27,41 +35,63 @@ int scan_argument(char content[], char separator) {
   /* Return if there is no text after the argument */
   if (is_terminator(content[0])) {
     content[0] = '\0';
-    return 0; /* 0: Last argument */
+      res.status = LastArgument;
+      return res;
   }
 
   /* Return error if text was found instead of a separator */
-  if (content[0] != separator) return -2; /* -2: Missing separator between arguments */
+  if (content[0] != separator) {
+    res.status = MissingSeparator;
+    return res;
+  }
 
   /* Terminate word where the separator is and skip following space */
   content[0] = '\0';
   content = skip_space(++content);
 
   /* Return error if there is an extra separator */
-  if (content[0] == separator) return -3; /* -3: Two consecutive separator */
+  if (content[0] == separator) {
+    res.status = DoubleSeparator;
+    return res;
+  }
 
   /* Return error if there is not another argument following the separator */
-  if (is_terminator(content[0])) return -4; /* -4: Trailing separator */
+  if (is_terminator(content[0])) {
+    res.status = TrailingSeprator;
+    return res;
+  }
 
   /* Return number of chars to skip to next argument */
-  return content - start;
+  res.skip = content - start;
+  return res;
 }
 
-int scan_string(char content[]) {
+ScanStringResult scan_string(char content[]) {
   char *init = content;
   char *str_start;
+  ScanStringResult res;
+  res.status = StringScanShouldSkip;
 
   /* Return error if there is no content */
-  if (content == NULL) return -1; /* -1: No string */
+  if (content == NULL) {
+    res.status = SrtingScanNoContent;
+    return res;
+  }
 
   /* Skip space */
   content = skip_space(content);
 
   /* Return error if there is no string */
-  if (is_terminator(content[0])) return -1; /* -1: No string (only space) */
+  if (is_terminator(content[0])) {
+    res.status = SrtingScanNoContent;
+    return res;
+  }
 
   /* Return error if a quotation mark is missing */
-  if (content[0] != '"') return -2; /* -2: Missing opening quotation mark */
+  if (content[0] != '"') {
+    res.status = MissingOpeningQuotation;
+    return res;
+  }
   str_start = ++content;
 
   /* Progress until next quotation mark */
@@ -69,7 +99,10 @@ int scan_string(char content[]) {
     content++;
 
   /* Return error if there is no closing quotation mark  */
-  if (is_terminator(content[0])) return -3; /* -3: Missing closing quotation mark */
+  if (is_terminator(content[0])) {
+    res.status = MissingClosingQuotation;
+    return res;
+  }
 
   /* Terminate word where the separator is and skip following space */
   content[0] = '\0';
@@ -77,10 +110,14 @@ int scan_string(char content[]) {
 
   /* Return error if there is text after the string */
   content = skip_space(content);
-  if (!is_terminator(content[0])) return -4; /* -4: Extraneous text after string declaration */
+  if (!is_terminator(content[0])) {
+    res.status = ExtraneousText;
+    return res;
+  }
 
   /* Return number of chars to skip to start of string */
-  return str_start - init;
+  res.skip = str_start - init;
+  return res;
 }
 
 int scan_number(char *text, int *out, LogContext context) {

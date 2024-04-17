@@ -63,7 +63,7 @@ static int scan_label(char line[MAX_LINE_LEN], char **out, LogContext context) {
 /* [DOCS NEEDED] */
 static void scan_define(char content[], ParsedLine *out, LogContext context) {
   char *word;
-  int scan_result;
+  ScanArgumentResult scan_result;
 
   /* Print error and return if there is a label */
   if (out->content.command.label != NULL) {
@@ -83,20 +83,22 @@ static void scan_define(char content[], ParsedLine *out, LogContext context) {
   scan_result = scan_argument(content, '=');
 
   /* Handle errors */
-  if (scan_result <= 0) {
-    switch (scan_result) {
-    case 0:  /* No text after argument */
-    case -1: /* No text */
-    case -5: /* No argument */
-    case -4: /* Trailing = */
+  if (scan_result.status != ArgumentScanShouldSkip) {
+    switch (scan_result.status) {
+    case LastArgument:
+    case ArgumentScanNoContent:
+    case MissingFirstArg:
+    case TrailingSeprator:
       print_log_context(context, "ERROR");
       printf("Missing argument in constant defenition\n");
       break;
-    case -2: /* Missing = */
-    case -3: /* Double = */
+    case MissingSeparator:
+    case DoubleSeparator:
       print_log_context(context, "ERROR");
       printf("In a constant defenition, the constant and value are seperated by a signle "
              "'=' sign \n");
+      break;
+    default:
       break;
     }
     out->line_type = Error;
@@ -105,12 +107,11 @@ static void scan_define(char content[], ParsedLine *out, LogContext context) {
 
   /* Scan second argument */
   out->content.define.name = word;
-  content += scan_result;
+  content += scan_result.skip;
   word = content;
   scan_result = scan_argument(content, '=');
 
-  if (scan_result != 0) {
-    /* Note: the only case where scan_result != 0 is when there is extra text of some kind */
+  if (scan_result.status != LastArgument) {
     print_log_context(context, "ERROR");
     printf("Extraneous text after constant defenition\n");
     out->line_type = Error;
@@ -122,7 +123,7 @@ static void scan_define(char content[], ParsedLine *out, LogContext context) {
 
 static void scan_command(char content[], ParsedLine *out, LogContext context) {
   char *word;
-  int scan_result;
+  ScanArgumentResult scan_result;
 
   /* Scan command name */
   content = skip_space(content);
@@ -145,21 +146,21 @@ static void scan_command(char content[], ParsedLine *out, LogContext context) {
   word = content;
   scan_result = scan_argument(content, ',');
 
-  if (scan_result < 0) {
-    if (scan_result == -5) return; /* Return on no arguments (no text)*/
+  if (scan_result.status != ArgumentScanShouldSkip && scan_result.status != LastArgument) {
+    if (scan_result.status == ArgumentScanNoContent) return; /* Return on no arguments (no text)*/
     print_log_context(context, "ERROR");
-    switch (scan_result) {
-    case -5: /* Not text at all */
-      return;
-    case -1: /* No argument */
+    switch (scan_result.status) {
+    case MissingFirstArg:
       printf("Missing first argument of command invocation\n");
       break;
-    case -2: /* Missing , */
-    case -3: /* Double , */
+    case MissingSeparator:
+    case DoubleSeparator:
       printf("Arguments in command invocation are seperated by a signle comma\n");
       break;
-    case -4: /* Trailing , */
+    case TrailingSeprator:
       printf("Missing second argument in command invocation\n");
+      break;
+    default:
       break;
     }
     out->line_type = Error;
@@ -169,16 +170,15 @@ static void scan_command(char content[], ParsedLine *out, LogContext context) {
   out->content.command.dest_arg = word;
 
   /* Return if there is only one argument */
-  if (scan_result == 0) return;
+  if (scan_result.status == LastArgument) return;
 
   /* Scan second argument */
-  content += scan_result;
+  content += scan_result.skip;
   word = content;
   scan_result = scan_argument(content, ',');
 
   /* Print error and return if there is extraneous text */
-  if (scan_result != 0) {
-    /* Note: the only case where scan_result != 0 is when there is extra text of some kind */
+  if (scan_result.status != LastArgument) {
     print_log_context(context, "ERROR");
     printf("Extraneous text after command invocation\n");
     out->line_type = Error;

@@ -2,6 +2,7 @@
 #pragma once
 #include "binary_table.h"
 #include "parse_util.h"
+#include "parser.h"
 #include "symbol_table.h"
 
 /* [DOCS NEEDED] */

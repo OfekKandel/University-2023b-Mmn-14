@@ -1,15 +1,14 @@
 /* [DOCS NEEDED] */
 #include "assembler.h"
-#include "binary_table.h"
-#include "parse_util.h"
-#include "symbol_table.h"
 #include "assembling_util.h"
+#include "binary_table.h"
+#include "parser.h"
+#include "symbol_table.h"
 #include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 
 /* [DOCS NEEDED] */
 static void free_tables(SymbolTable symbol_table, BinaryTable data_table,

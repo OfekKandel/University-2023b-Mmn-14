@@ -1,6 +1,8 @@
 /* [DOCS NEEDED] */
 #include "binary_table.h"
 #include "encoding_util.h"
+#include "parse_util.h"
+#include "parser.h"
 #include "symbol_table.h"
 #include <ctype.h>
 #include <stdbool.h>
@@ -34,8 +36,8 @@ static int get_constant_value(SymbolTable *symbol_table, char *str, int *out, Lo
 }
 
 /* [DOCS NEEDED] */
-static int add_array_index_arg(char *arg, BinaryTable *instruction_table,
-                                  SymbolTable *symbol_table, LogContext context) {
+static int add_array_index_arg(char *arg, BinaryTable *instruction_table, SymbolTable *symbol_table,
+                               LogContext context) {
   int index_value;
   char *index_str;
   ArgumentWord index_word;
@@ -55,29 +57,30 @@ static int add_array_index_arg(char *arg, BinaryTable *instruction_table,
   return true;
 }
 
-/* [DOCS NEEDED] returns how much to skip, 0 if scan should stop, -1 if there
- * were errors */
+/* [DOCS NEEDED] returns how much to skip, 0 if scan should stop, -1 if there were errors */
 static int add_data_argument(char *content, BinaryTable *data_table, SymbolTable *symbol_table,
                              LogContext context) {
   BinaryWord word;
-  int res = scan_argument(content, ',');
+  ScanArgumentResult res = scan_argument(content, ',');
   int value;
 
-  if (res < 0) {
+  if (res.status != ArgumentScanShouldSkip && res.status != LastArgument) {
     print_log_context(context, "ERROR");
-    switch (res) {
-    case -5: /* No text */
+    switch (res.status) {
+    case ArgumentScanNoContent:
       printf("A data instruction must contain at least one argument\n");
       break;
-    case -1: /* Missing first argument */
+    case MissingFirstArg:
       printf("A data instruction must start with an argument\n");
       break;
-    case -2: /* Missing , */
-    case -3: /* Double , */
+    case MissingSeparator:
+    case DoubleSeparator:
       printf("Two arguments in a data instruction are separated by a single comma\n");
       break;
-    case -4: /* Trailing , */
+    case TrailingSeprator:
       printf("Trailing comma in data instruction\n");
+      break;
+    default:
       break;
     }
     return -1;
@@ -90,7 +93,10 @@ static int add_data_argument(char *content, BinaryTable *data_table, SymbolTable
   word.content = value;
   append_word(data_table, word);
 
-  return res; /* Return chars to skip */
+  /* Return 0 if scan should stop */
+  if (res.status == LastArgument) return 0;
+
+  return res.skip; /* Return chars to skip */
 }
 
 /* [DOCS NEEDED] return whether the data instruction was scanned successfully */
@@ -119,7 +125,7 @@ static int add_data_instruction(DotInstructionLine line, BinaryTable *data_table
 static int add_string_instruction(DotInstructionLine line, BinaryTable *data_table,
                                   SymbolTable *symbol_table, LogContext context) {
   char *content = line.args_start;
-  int res;
+  ScanStringResult res;
   BinaryWord word;
 
   /* If there is a label, add to the symbol table, and handle error */
@@ -132,24 +138,26 @@ static int add_string_instruction(DotInstructionLine line, BinaryTable *data_tab
 
   /* Scan string and handle errors */
   res = scan_string(content);
-  if (res < 0) {
+  if (res.status != StringScanShouldSkip) {
     print_log_context(context, "ERROR");
-    switch (res) {
-    case -1:
+    switch (res.status) {
+    case SrtingScanNoContent:
       printf("No string given in .string instruction\n");
       break;
-    case -2:
+    case MissingOpeningQuotation:
       printf("Missing opening quotation mark in string instruction\n");
       break;
-    case -3:
+    case MissingClosingQuotation:
       printf("Missing closing quotation mark in string instruction\n");
       break;
-    case -4:
+    case ExtraneousText:
       printf("Extraneous text after string instruction\n");
+      break;
+    default:
       break;
     }
   }
-  content += res;
+  content += res.skip;
 
   /* Add string to data table */
   for (; content[0] != '\0'; content++) {
@@ -166,10 +174,10 @@ static int add_string_instruction(DotInstructionLine line, BinaryTable *data_tab
 static int add_ent_ext_instruction(DotInstructionLine line, SymbolTable *symbol_table, int flag,
                                    LogContext context) {
   char *argument = line.args_start;
-  int res = scan_argument(argument, ','); /* Separator only matters in error cases here */
+  ScanArgumentResult res = scan_argument(argument, ','); /* Separator only matters in errors here */
 
   /* Print error and return if there is more than one argument */
-  if (res != 0) {
+  if (res.status != LastArgument) {
     print_log_context(context, "ERROR");
     printf(".%s instruction takes one argument\n", line.name);
     return false;
