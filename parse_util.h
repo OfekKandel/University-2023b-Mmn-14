@@ -4,6 +4,18 @@
 #include <stdio.h>
 #define MAX_LINE_LEN 80
 
+/* Logger ----------------------------------------------- */
+/* [DOCS NEEDED] */
+typedef struct LogContext {
+  char *filename;
+  char *file_ext;
+  int line;
+} LogContext;
+
+void print_log_context(LogContext log_info, char *severity);
+
+
+/* Parser ------------------------------------ */
 typedef enum {
   /* No content */
   Error,
@@ -45,7 +57,7 @@ typedef struct ParsedLine {
 /* Main parsing function -------------- */
 
 /* [DOCS NEEDED] */
-ParsedLine parse_line(char line[MAX_LINE_LEN]);
+ParsedLine parse_line(char line[MAX_LINE_LEN], LogContext context);
 
 /* Argument parsing functions ------------- */
 
@@ -57,10 +69,10 @@ int scan_argument(char content[], char separator);
 /* [DOCS NEEDED] */
 int scan_string(char content[]);
 /* [DOCS NEEDED] returns true if the text not a valid number */
-int scan_number(char *text, int *out);
+int scan_number(char *text, int *out, LogContext context);
 /* [DOCS NEEDED] returns a string containing the index/constant's name, NULL on error, the array
  * symbol will be terminated, meaning the given content argument can be used to access it */
-char *scan_array_index(char content[]);
+char *scan_array_index(char content[], LogContext context);
 
 /* File functions ----------- */
 

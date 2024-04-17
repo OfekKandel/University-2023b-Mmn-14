@@ -10,3 +10,7 @@ main.dSYM/
 # Inputs & example outputs
 inputs/
 example_outptus/
+
+# Diffs
+diff-mine.txt
+diff-thers.txt

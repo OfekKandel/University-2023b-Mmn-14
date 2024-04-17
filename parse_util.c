@@ -1,5 +1,6 @@
 #include "parse_util.h"
 #include <ctype.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,8 +8,15 @@
 
 #define CMD_NAME_LENGTH 3
 
+/* Logger ----------------------------------------- */
+void print_log_context(LogContext log_info, char *severity) {
+  printf("%s[%s%s - Line %d]: ", severity, log_info.filename, log_info.file_ext, log_info.line);
+}
+
+/* Debugger ----------------------------------------- */
+
 /* [DOCS NEEDED] returns false on error, NULL to out on no label */
-static int scan_label(char line[MAX_LINE_LEN], char **out) {
+static int scan_label(char line[MAX_LINE_LEN], char **out, LogContext context) {
   char *word;
   char illegal_char = '\0';
 
@@ -27,8 +35,9 @@ static int scan_label(char line[MAX_LINE_LEN], char **out) {
 
   /* Print illegal character error & return false if needed */
   if (illegal_char) {
-    printf("ERROR: Illegal character '%c' in label name: '%.*s'\n", illegal_char,
-           (int)(line - word + 1), word);
+    print_log_context(context, "ERROR");
+    printf("Illegal character '%c' in label name: '%.*s'\n", illegal_char, (int)(line - word + 1),
+           word);
     return false;
   }
 
@@ -101,13 +110,14 @@ int scan_argument(char content[], char separator) {
 }
 
 /* [DOCS NEEDED] */
-static void scan_define(char content[], ParsedLine *out) {
+static void scan_define(char content[], ParsedLine *out, LogContext context) {
   char *word;
   int scan_result;
 
   /* Print error and return if there is a label */
   if (out->content.command.label != NULL) {
-    printf("ERROR: A label is meaningless before a constant defenition and is not allowed\n");
+    print_log_context(context, "ERROR");
+    printf("A label is meaningless before a constant defenition and is not allowed\n");
     out->line_type = Error;
     return;
   }
@@ -128,11 +138,13 @@ static void scan_define(char content[], ParsedLine *out) {
     case -1: /* No text */
     case -5: /* No argument */
     case -4: /* Trailing = */
-      printf("ERROR: Missing argument in constant defenition\n");
+      print_log_context(context, "ERROR");
+      printf("Missing argument in constant defenition\n");
       break;
     case -2: /* Missing = */
     case -3: /* Double = */
-      printf("ERROR: In a constant defenition, the constant and value are seperated by a signle "
+      print_log_context(context, "ERROR");
+      printf("In a constant defenition, the constant and value are seperated by a signle "
              "'=' sign \n");
       break;
     }
@@ -148,7 +160,8 @@ static void scan_define(char content[], ParsedLine *out) {
 
   if (scan_result != 0) {
     /* Note: the only case where scan_result != 0 is when there is extra text of some kind */
-    printf("ERROR: Extraneous text after constant defenition\n");
+    print_log_context(context, "ERROR");
+    printf("Extraneous text after constant defenition\n");
     out->line_type = Error;
     return;
   }
@@ -156,7 +169,7 @@ static void scan_define(char content[], ParsedLine *out) {
   out->content.define.value = word;
 }
 
-static void scan_command(char content[], ParsedLine *out) {
+static void scan_command(char content[], ParsedLine *out, LogContext context) {
   char *word;
   int scan_result;
 
@@ -167,7 +180,8 @@ static void scan_command(char content[], ParsedLine *out) {
 
   /* Print error on bad name (too long) */
   if (!isspace(content[0]) && !is_terminator(content[0])) {
-    printf("ERROR: Invalid command name\n");
+    print_log_context(context, "ERROR");
+    printf("Invalid command name\n");
     out->line_type = Error;
     return;
   }
@@ -181,18 +195,20 @@ static void scan_command(char content[], ParsedLine *out) {
   scan_result = scan_argument(content, ',');
 
   if (scan_result < 0) {
+    if (scan_result == -5) return; /* Return on no arguments (no text)*/
+    print_log_context(context, "ERROR");
     switch (scan_result) {
-    case -5: /* Return on no arguments (no text)*/
+    case -5:
       return;
     case -1: /* No argument */
-      printf("ERROR: Missing first argument of command invocation\n");
+      printf("Missing first argument of command invocation\n");
       break;
     case -2: /* Missing , */
     case -3: /* Double , */
-      printf("ERROR: Arguments in command invocation are seperated by a signle comma\n");
+      printf("Arguments in command invocation are seperated by a signle comma\n");
       break;
     case -4: /* Trailing , */
-      printf("ERROR: Missing second argument in command invocation\n");
+      printf("Missing second argument in command invocation\n");
       break;
     }
     out->line_type = Error;
@@ -212,7 +228,8 @@ static void scan_command(char content[], ParsedLine *out) {
   /* Print error and return if there is extraneous text */
   if (scan_result != 0) {
     /* Note: the only case where scan_result != 0 is when there is extra text of some kind */
-    printf("ERROR: Extraneous text after command invocation\n");
+    print_log_context(context, "ERROR");
+    printf("Extraneous text after command invocation\n");
     out->line_type = Error;
     return;
   }
@@ -223,7 +240,7 @@ static void scan_command(char content[], ParsedLine *out) {
 }
 
 /* [DOCS NEEDED] */
-static void scan_dot_instruction(char content[], ParsedLine *out) {
+static void scan_dot_instruction(char content[], ParsedLine *out, LogContext context) {
   char *word;
 
   /* Skip space and initial dot */
@@ -236,7 +253,8 @@ static void scan_dot_instruction(char content[], ParsedLine *out) {
 
   /* Print error on bad name */
   if (!isspace(content[0]) && !is_terminator(content[0])) {
-    printf("ERROR: Invalid dot-command name\n");
+    print_log_context(context, "ERROR");
+    printf("Invalid dot-command name\n");
     out->line_type = Error;
     return;
   }
@@ -255,7 +273,7 @@ static void scan_dot_instruction(char content[], ParsedLine *out) {
 
 /* Main parsing function -------------- */
 
-ParsedLine parse_line(char line[MAX_LINE_LEN]) {
+ParsedLine parse_line(char line[MAX_LINE_LEN], LogContext context) {
   ParsedLine out;
   char *label;
 
@@ -275,7 +293,7 @@ ParsedLine parse_line(char line[MAX_LINE_LEN]) {
   }
 
   /* Read label if there is one and return on error */
-  if (!scan_label(line, &label)) {
+  if (!scan_label(line, &label, context)) {
     out.line_type = Error;
     return out;
   }
@@ -287,13 +305,13 @@ ParsedLine parse_line(char line[MAX_LINE_LEN]) {
   out.line_type = get_line_content_type(line);
   switch (out.line_type) {
   case Define:
-    scan_define(line, &out);
+    scan_define(line, &out, context);
     break;
   case DotInstruction:
-    scan_dot_instruction(line, &out);
+    scan_dot_instruction(line, &out, context);
     break;
   case Command:
-    scan_command(line, &out);
+    scan_command(line, &out, context);
     break;
   default: /* Exit on error (comment/empty already handled) */
     return out;
@@ -393,13 +411,14 @@ int scan_string(char content[]) {
   return str_start - init;
 }
 
-int scan_number(char *text, int *out) {
+int scan_number(char *text, int *out, LogContext context) {
   int is_negative = false;
   *out = 0;
   text = skip_space(text);
 
   if (text[0] != '+' && text[0] != '-' && !isdigit(text[0])) {
-    printf("ERROR: Number must start with '+', '-', or a digit\n");
+    print_log_context(context, "ERROR");
+    printf("Number must start with '+', '-', or a digit\n");
     return false;
   }
 
@@ -414,7 +433,8 @@ int scan_number(char *text, int *out) {
   *out /= 10;
 
   if (!is_terminator(text[0]) && !isspace(text[0])) {
-    printf("ERROR: Number must only contain '+', '-' (at the start), or digits\n");
+    print_log_context(context, "ERROR");
+    printf("Number must only contain '+', '-' (at the start), or digits\n");
     return false;
   }
 
@@ -423,7 +443,7 @@ int scan_number(char *text, int *out) {
   return true;
 }
 
-char *scan_array_index(char content[]) {
+char *scan_array_index(char content[], LogContext context) {
   char *index;
 
   /* Scan until opening bracket */
@@ -432,7 +452,8 @@ char *scan_array_index(char content[]) {
 
   /* Print error and return if there is no opening bracket */
   if (is_terminator(content[0])) {
-    printf("ERROR: To index an array a position must be provided within square brackets\n");
+    print_log_context(context, "ERROR");
+    printf("To index an array a position must be provided within square brackets\n");
     return NULL;
   }
 
@@ -444,7 +465,8 @@ char *scan_array_index(char content[]) {
 
   /* Print error if there is no closing bracket */
   if (is_terminator(content[0])) {
-    printf("ERROR: Missing closing bracket in indexed array \n");
+    print_log_context(context, "ERROR");
+    printf("Missing closing bracket in indexed array \n");
     return NULL;
   }
   content[0] = '\0';
@@ -452,7 +474,8 @@ char *scan_array_index(char content[]) {
 
   /* Check that there is no text after the closing bracket */
   if (content[0] != '\0') {
-    printf("ERROR: Extraneous text after indexed array argument\n");
+    print_log_context(context, "ERROR");
+    printf("Extraneous text after indexed array argument\n");
     return NULL;
   }
 

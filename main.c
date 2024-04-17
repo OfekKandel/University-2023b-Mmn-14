@@ -27,7 +27,8 @@ int analyze_file(char *filename) {
   }
 
   /* Run preprocessor */
-  if ((preprocessor_result = process_file(filename)) == -1) {
+  preprocessor_result = process_file(filename);
+  if (preprocessor_result == -1) {
     free(filepath);
     return false;
   }
@@ -48,6 +49,8 @@ int analyze_file(char *filename) {
 /* [DOCS NEEDED] */
 int main(int argc, char *argv[]) {
   int i;
+
+  /* TODO: Remove */
 
   /* [FOR DEBUG] */
   char *base_name = "inputs/no_mcr";
