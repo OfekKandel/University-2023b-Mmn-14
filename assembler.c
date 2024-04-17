@@ -160,20 +160,16 @@ static int encode_file(FILE *src_file, FILE *ob_file, FILE *ent_file, FILE *ext_
   /* Perform first pass, return if failed */
   res = first_pass(src_file, &symbol_table, &instruction_table, &data_table, context);
   if (!res) {
-    printf("DEBUG: First pass failed\n");
     free_tables(symbol_table, data_table, instruction_table);
     return false;
   }
-  printf("DEBUG: Finished first pass\n");
 
   /* Perform second pass, return if failed */
   res = second_pass(&symbol_table, &instruction_table, &data_table, ent_file, ext_file);
   if (!res) {
-    printf("DEBUG: Second pass failed\n");
     free_tables(symbol_table, data_table, instruction_table);
     return false;
   }
-  printf("DEBUG: Finished second pass\n");
 
   /* Write output files */
   write_ob_file(ob_file, data_table, instruction_table);
@@ -200,6 +196,10 @@ int assemble_file(char *filename, char *suffix) {
 
   /* Process file */
   success = encode_file(src_file, ob_file, ent_file, ext_file, context);
+  if (success)
+    printf("Successfully assembled file '%s%s'\n", filename, suffix);
+  else
+    printf("Failed to assemble file '%s%s'\n", filename, suffix);
 
   /* Close files */
   fclose(src_file);
