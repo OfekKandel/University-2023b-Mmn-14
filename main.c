@@ -3,7 +3,6 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
 
 #include "assembler.h"
@@ -26,17 +25,11 @@ int analyze_file(char *filename) {
     return false;
   }
 
-  /* Run preprocessor */
+  /* Run preprocessor - fill-in macros */
   preprocessor_result = process_file(filename);
-  if (preprocessor_result == -1) {
+  if (preprocessor_result == -1) { /* Preprocessor failed */
     free(filepath);
     return false;
-  }
-
-  /* Select next file to run assembler on */
-  if (preprocessor_result == 1) {
-    free(filepath);
-    filepath = with_ext(filename, PROCESSED_FILE_SUFFIX);
   }
 
   /* Run assembler */

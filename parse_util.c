@@ -13,8 +13,6 @@ void print_log_context(LogContext log_info, char *severity) {
   printf("%s[%s%s - Line %d]: ", severity, log_info.filename, log_info.file_ext, log_info.line);
 }
 
-/* Debugger ----------------------------------------- */
-
 /* [DOCS NEEDED] returns false on error, NULL to out on no label */
 static int scan_label(char line[MAX_LINE_LEN], char **out, LogContext context) {
   char *word;
@@ -198,7 +196,7 @@ static void scan_command(char content[], ParsedLine *out, LogContext context) {
     if (scan_result == -5) return; /* Return on no arguments (no text)*/
     print_log_context(context, "ERROR");
     switch (scan_result) {
-    case -5:
+    case -5: /* Not text at all */
       return;
     case -1: /* No argument */
       printf("Missing first argument of command invocation\n");
@@ -287,7 +285,8 @@ ParsedLine parse_line(char line[MAX_LINE_LEN], LogContext context) {
   if (is_terminator(line[0])) {
     out.line_type = Empty;
     return out;
-  } else if (line[0] == ';') {
+  }
+  if (line[0] == ';') {
     out.line_type = Comment;
     return out;
   }
@@ -373,7 +372,7 @@ int is_file_empty(const char *filename, const char *extension, const char *error
   return false;
 }
 
-/* General parsing functions ------------- */
+/* Argument parsing functions ------------- */
 
 int scan_string(char content[]) {
   char *init = content;

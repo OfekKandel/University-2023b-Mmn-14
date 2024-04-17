@@ -100,20 +100,21 @@ static void write_macro_invocation(MacroLines *invoked_mcr, FILE *out_file) {
 }
 
 /* [DOCS NEEDED] returns whether a new file was created */
-static bool read_file(FILE *src_file, const char *src_path, FILE *out_file, const char *out_path,
+static int read_file(FILE *src_file, const char *src_path, FILE *out_file, const char *out_path,
                       LogContext context) {
   char line[MAX_LINE_LEN + 1], *mcr_name;
   int n_line = 1;
   MacroLines *active_mcr = NULL, *invoked_mcr;
   MacroTable table;
-  table.head = NULL; /* Fixes memory bug */
+  table.head = NULL;
 
   while (fgets(line, sizeof(line), src_file) != NULL) {
     context.line = n_line;
     /* Check that line is under 80 chars */
-    if (line[strlen(line) - 1] != '\n') {
+    if (!is_terminator(line[strlen(line) - 1])) {
       print_log_context(context, "ERROR");
       printf("Line with over 80 characters found\n");
+      return -1;
     }
 
     if (active_mcr != NULL) {
