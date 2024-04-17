@@ -54,8 +54,13 @@ static int scan_label(char line[MAX_LINE_LEN], char **out, LogContext context) {
     return false;
   }
 
-  /* Return label */
+  /* Print error if a macro is a reserved word */
   line[0] = '\0';
+  if (is_reserved_word(word)) {
+    print_log_context(context, "ERROR");
+    printf("'%s' is an illegal label as it is a reserved word\n", word);
+  }
+
   *out = word;
   return true;
 }
@@ -125,8 +130,17 @@ static void scan_command(char content[], ParsedLine *out, LogContext context) {
   char *word;
   ScanArgumentResult scan_result;
 
-  /* Scan command name */
   content = skip_space(content);
+
+  /* Print if there is no command */
+  if (is_terminator(content[0])) {
+    print_log_context(context, "ERROR");
+    printf("Expected a command, but found nothing\n");
+    out->line_type = Error;
+    return;
+  }
+
+  /* Scan command name */
   word = content;
   content += CMD_NAME_LENGTH;
 

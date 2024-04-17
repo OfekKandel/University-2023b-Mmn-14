@@ -46,6 +46,9 @@ char *scan_array_index(char content[], LogContext context);
 /* [DOCS NEEDED] return whether a given string is a register name */
 int is_register_name(char *arg);
 
+/* [DOCS NEEDED] */
+int is_reserved_word(char *word);
+
 /* Return a pointer to the next position that isn't a letter in a string */
 char *skip_alpha(char *str);
 

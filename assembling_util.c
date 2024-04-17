@@ -156,6 +156,7 @@ static int add_string_instruction(DotInstructionLine line, BinaryTable *data_tab
     default:
       break;
     }
+    return false;
   }
   content += res.skip;
 
@@ -266,12 +267,13 @@ int add_command(CommandLine line, BinaryTable *instruction_table, SymbolTable *s
     }
 
   /* Get opcode for command */
-  first_word.opcode = get_opcode(line.cmd);
-  if (first_word.opcode == -1) {
+  res = get_opcode(line.cmd);
+  if (res == -1) {
     print_log_context(context, "ERROR");
     printf("Unknown command name '%s'\n", line.cmd);
     return false;
   }
+  first_word.opcode = res;
 
   /* Get addressing modes and verify them */
   first_word.src_adressing = get_adressing_mode(line.src_arg);

@@ -43,6 +43,12 @@ static char *read_macro_declaration(char *line, LogContext context) {
     return NULL;
   }
 
+  /* Print error if a macro is a reserved word */
+  if (is_reserved_word(mcr_name)) {
+    print_log_context(context, "ERROR");
+    printf("'%s' is an illegal macro name as it is a reserved word\n", mcr_name);
+  }
+
   return mcr_name;
 }
 
@@ -129,7 +135,6 @@ static int read_file(FILE *src_file, const char *src_path, FILE *out_file, const
       mcr_name = read_macro_declaration(line, context);
       if (mcr_name) {
         /* If there is add it to the table (and start scanning) */
-        /* TODO: Check that macro is not a saved word */
         active_mcr = insert_macro(&table, mcr_name);
       } else {
         /* Else check if a macro is being invoked */
@@ -144,8 +149,6 @@ static int read_file(FILE *src_file, const char *src_path, FILE *out_file, const
 
     n_line++;
   }
-
-  printf("Finished file %s\n", src_path);
 
   /* Remove .am file if no macros exist */
   if (table.head == NULL) {

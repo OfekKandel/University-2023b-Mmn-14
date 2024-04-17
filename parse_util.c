@@ -1,7 +1,7 @@
 #include "parse_util.h"
+#include "encoding_util.h"
 #include "file_util.h"
 #include <ctype.h>
-#include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,8 +35,8 @@ ScanArgumentResult scan_argument(char content[], char separator) {
   /* Return if there is no text after the argument */
   if (is_terminator(content[0])) {
     content[0] = '\0';
-      res.status = LastArgument;
-      return res;
+    res.status = LastArgument;
+    return res;
   }
 
   /* Return error if text was found instead of a separator */
@@ -196,6 +196,14 @@ char *scan_array_index(char content[], LogContext context) {
 int is_register_name(char *arg) {
   /* Matches argument of form r0 to r7 */
   return arg[0] == 'r' && isdigit(arg[1]) && arg[1] - '0' <= 7 && arg[2] == '\0';
+}
+
+int is_reserved_word(char *word) {
+  if (is_register_name(word) || get_opcode(word) != -1) return true;
+  if (strcmp(word, "define") == 0 || strcmp(word, "extern") == 0 || strcmp(word, "entry") == 0 ||
+      strcmp(word, "data") == 0)
+    return true;
+  return false;
 }
 
 char *skip_space(char *str) {
