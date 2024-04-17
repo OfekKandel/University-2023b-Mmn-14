@@ -1,63 +1,7 @@
 /* [DOCS NEEDED] */
 #pragma once
 
-#include <stdio.h>
-#define MAX_LINE_LEN 80
-
-/* Logger ----------------------------------------------- */
-/* [DOCS NEEDED] */
-typedef struct LogContext {
-  char *filename;
-  char *file_ext;
-  int line;
-} LogContext;
-
-void print_log_context(LogContext log_info, char *severity);
-
-
-/* Parser ------------------------------------ */
-typedef enum {
-  /* No content */
-  Error,
-  Empty,
-  Comment,
-  /* With content */
-  Define,
-  DotInstruction,
-  Command
-} LineType;
-
-typedef struct DefineLine {
-  char *name;
-  char *value;
-} DefineLine;
-
-typedef struct DotInstructionLine {
-  char *label;
-  char *name;
-  char *args_start; /* Pointer to the first argument, should be iterated */
-} DotInstructionLine;
-
-typedef struct CommandLine {
-  char *label; /* Optional */
-  char *cmd;
-  char *src_arg;  /* Optional */
-  char *dest_arg; /* Optional */
-} CommandLine;
-
-typedef struct ParsedLine {
-  LineType line_type;
-  union {
-    DefineLine define;
-    DotInstructionLine dot_instruction;
-    CommandLine command;
-  } content;
-} ParsedLine;
-
-/* Main parsing function -------------- */
-
-/* [DOCS NEEDED] */
-ParsedLine parse_line(char line[MAX_LINE_LEN], LogContext context);
+#include "file_util.h"
 
 /* Argument parsing functions ------------- */
 
@@ -73,20 +17,6 @@ int scan_number(char *text, int *out, LogContext context);
 /* [DOCS NEEDED] returns a string containing the index/constant's name, NULL on error, the array
  * symbol will be terminated, meaning the given content argument can be used to access it */
 char *scan_array_index(char content[], LogContext context);
-
-/* File functions ----------- */
-
-/* Given a filename (with no extension) and an extension, adds the extension to
- * the filename. Returns the new filename, memory returned by this function must
- * be freed) */
-char *with_ext(const char *filename, const char *extension);
-/* [DOCS NEEDED] */
-FILE *open_with_ext(const char *filename, const char *extension, const char *mode,
-                    const char *error_desc);
-/* [DOCS NEEDED] */
-int remove_file(const char *filename, const char *extension, const char *error_desc);
-/* [DOCS NEEDED] */
-int is_file_empty(const char *filename, const char *extension, const char *error_desc);
 
 /* Smaller parsing functions --------------- */
 

@@ -1,6 +1,7 @@
 #include "preprocessor.h"
 #include "macro_table.h"
 #include "parse_util.h"
+#include "parser.h"
 #include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>

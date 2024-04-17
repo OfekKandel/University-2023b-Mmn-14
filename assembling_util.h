@@ -1,4 +1,5 @@
 /* [DOCS NEEDED] */
+#pragma once
 #include "binary_table.h"
 #include "parse_util.h"
 #include "symbol_table.h"

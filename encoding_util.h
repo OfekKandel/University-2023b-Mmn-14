@@ -1,3 +1,6 @@
+/* [DOCS NEEDED] */
+
+#pragma once
 #include "binary_table.h"
 #include "symbol_table.h"
 
