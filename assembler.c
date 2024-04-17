@@ -90,7 +90,7 @@ static int first_pass_line(char *line, SymbolTable *symbol_table, BinaryTable *i
 static int first_pass(FILE *src_file, SymbolTable *symbol_table, BinaryTable *instruction_table,
                       BinaryTable *data_table, LogContext context) {
   SymbolTableNode *iter;
-  bool succesful = true;
+  int succesful = true;
   char line[MAX_LINE_LEN + 1];
 
   /* Encode each line */
@@ -113,7 +113,7 @@ static int second_pass(SymbolTable *symbol_table, BinaryTable *instruction_table
                        BinaryTable *data_table, FILE *ent_file, FILE *ext_file) {
   BinaryTableNode *iter;
   SymbolTableNode *symbol;
-  bool succesful = true;
+  int succesful = true;
   int word_num = 100;
 
   for (iter = instruction_table->head; iter != NULL; iter = iter->next, word_num++) {
