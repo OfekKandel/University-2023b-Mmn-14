@@ -44,7 +44,7 @@ static int write_ent_file(SymbolTable *symbol_table, FILE *ent_file) {
   int successful = true;
 
   for (iter = symbol_table->head; iter != NULL; iter = iter->next) {
-    if (iter->linker_flag != 1) continue; /* skip symbols not marked entry */
+    if (iter->linker_flag != EntryLinkerFlag) continue; /* skip symbols not marked entry */
 
     /* Print error continue if the symbol wasn't filled in */
     if (iter->type == 'x') {
@@ -129,7 +129,7 @@ static int second_pass(SymbolTable *symbol_table, BinaryTable *instruction_table
     iter->symbol = NULL;
 
     /* If symbol is external then set the ARE and add it to the ext file */
-    if (symbol->linker_flag == 2) {
+    if (symbol->linker_flag == ExternalLinkerFlag) {
       fprintf(ext_file, "%s\t%04d \n", symbol->name, word_num);
       iter->content.content = 1; /* Sets ARE to 1 and rest (the value) to 0 */
       continue;

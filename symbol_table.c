@@ -27,7 +27,7 @@ int append_symbol(SymbolTable *table, char *name, char type, int value, LogConte
   strcpy(node->name, name);
   node->type = type;
   node->value = value;
-  node->linker_flag = 0;
+  node->linker_flag = NoLinkerFlag;
 
   /* Insert it at the start of the table */
   node->next = table->head;
@@ -36,7 +36,7 @@ int append_symbol(SymbolTable *table, char *name, char type, int value, LogConte
   return true;
 }
 
-int mark_symbol(SymbolTable *table, char *name, int flag, LogContext context) {
+int mark_symbol(SymbolTable *table, char *name, LinkerFlag flag, LogContext context) {
   SymbolTableNode *existing;
   existing = search_symbol(table, name);
 
@@ -48,7 +48,7 @@ int mark_symbol(SymbolTable *table, char *name, int flag, LogContext context) {
   }
 
   /* If it exists we make sure it isn't marked */
-  if (existing->linker_flag != 0) {
+  if (existing->linker_flag != NoLinkerFlag) {
     if (existing->linker_flag == flag) return true; /* If its just a re-marking then return */
     print_log_context(context, "ERROR");
     printf("Symbol cannot be not marked as both entry and external\n");

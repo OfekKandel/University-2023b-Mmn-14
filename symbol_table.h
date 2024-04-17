@@ -3,11 +3,17 @@
 
 #include "parse_util.h"
 
+typedef enum {
+  NoLinkerFlag,
+  EntryLinkerFlag,
+  ExternalLinkerFlag
+} LinkerFlag;
+
 typedef struct SymbolTableNode {
   char *name;
   char type;
   int value;
-  int linker_flag; /* 0 - None, 1 - Entry, 2 - External */
+  LinkerFlag linker_flag;
   LogContext context;
   struct SymbolTableNode *next;
 } SymbolTableNode;
@@ -21,7 +27,7 @@ typedef struct SymbolTable {
 int append_symbol(SymbolTable *table, char *name, char type, int value, LogContext context);
 
 /* [DOCS NEEDED] returns false on error */
-int mark_symbol(SymbolTable *table, char *name, int flag, LogContext context);
+int mark_symbol(SymbolTable *table, char *name, LinkerFlag flag, LogContext context);
 
 /* [DOCS NEEDED] returns NULL if no symbol was found */
 SymbolTableNode *search_symbol(SymbolTable *table, char *name);
