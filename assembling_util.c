@@ -301,7 +301,7 @@ int add_command(CommandLine line, BinaryTable *instruction_table, SymbolTable *s
   if (line.label != NULL)
     if (!append_symbol(symbol_table, line.label, 'c', instruction_table->counter + 100, context)) {
       print_log_context(context, "ERROR");
-      printf("Attempt to redefine symbol '%s' (line %d)\n", line.label, context.line);
+      printf("Attempt to redefine symbol\n");
       return false;
     }
 
