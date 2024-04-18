@@ -1,3 +1,5 @@
+/* The source file for preprocessor.h. Uses macro_table.h for the macro table */
+
 #include "preprocessor.h"
 #include "macro_table.h"
 #include "parse_util.h"
@@ -11,7 +13,8 @@
 #define MACRO_KEYWORD "mcr"
 #define END_MACRO_KEYWORD "endmcr"
 
-/* [DOCS NEEDED] */
+/* Reads a macro declaration (e.g. mcr macro_name). Prints any errors in the macro declaration
+ * and returns the macro name (or NULL if there were errors or if there was no declaration) */
 static char *read_macro_declaration(char *line, LogContext context) {
   char *mcr_name;
 
@@ -52,7 +55,7 @@ static char *read_macro_declaration(char *line, LogContext context) {
   return mcr_name;
 }
 
-/* [DOCS NEEDED] */
+/* Reads a macro termination (endmcr). Returns whether there is macro termination in the line */
 static int read_macro_termination(char *line, LogContext context) {
   /* Check if the line's first word is 'endmcr' */
   line = skip_space(line);
@@ -70,7 +73,8 @@ static int read_macro_termination(char *line, LogContext context) {
   return true;
 }
 
-/* [DOCS NEEDED] */
+/* Reads a macro invocation (e.g. some_macro). Prints any errors in the macro invocation, returns
+ * a MacroLines struct pointer with the lines which the invoked macro is equivalent to */
 static MacroLines *read_macro_invocation(MacroTable *table, char *line, LogContext context) {
   char *mcr_name, original_char;
   MacroLines *lines_found;
@@ -98,7 +102,7 @@ static MacroLines *read_macro_invocation(MacroTable *table, char *line, LogConte
   return lines_found;
 }
 
-/* [DOCS NEEDED] */
+/* Writes the lines in a given MacroLines struct to the given out_file */
 static void write_macro_invocation(MacroLines *invoked_mcr, FILE *out_file) {
   MacroLineNode *line;
   for (line = invoked_mcr->head; line != NULL; line = line->next) {
@@ -106,9 +110,11 @@ static void write_macro_invocation(MacroLines *invoked_mcr, FILE *out_file) {
   }
 }
 
-/* [DOCS NEEDED] returns whether a new file was created */
+/* Iterates over the given source file and performs parsing and replacing of macros where needed,
+ * contains the main loop through which macros are scanned and replaced across the file, returns
+ * whether a new file was created */
 static int read_file(FILE *src_file, const char *src_path, FILE *out_file, const char *out_path,
-                      LogContext context) {
+                     LogContext context) {
   char line[MAX_LINE_LEN + 1], *mcr_name;
   int n_line = 1;
   MacroLines *active_mcr = NULL, *invoked_mcr;
@@ -163,8 +169,6 @@ static int read_file(FILE *src_file, const char *src_path, FILE *out_file, const
   free_macro_table(table);
   return true;
 }
-
-/* Global functions */
 
 int process_file(char *filename) {
   char *src_file_path, *out_file_path;

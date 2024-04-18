@@ -1,3 +1,5 @@
+/* Source file for parser.h */
+
 #include "parser.h"
 #include "parse_util.h"
 #include <ctype.h>
@@ -6,7 +8,7 @@
 
 #define CMD_NAME_LENGTH 3
 
-/* [DOCS NEEDED] */
+/* Decides which type of line the given content is (Command, Define, or dot-instruction) */
 static LineType get_line_content_type(char content[]) {
   char *word;
 
@@ -28,7 +30,12 @@ static LineType get_line_content_type(char content[]) {
   return DotInstruction;
 }
 
-/* [DOCS NEEDED] returns false on error, NULL to out on no label */
+/* Parses the label at the start of the given line, outputs it to the out argument, and prints any
+ * syntactical errors
+ * Input: The line with the label to parse, the out argument to output the label to (char **),
+ *        and the line's log-context
+ * Output: Returns false or error, else true. Outputs the label's address (pointer) to the out
+ *         argument or NULL if there is no label */
 static int scan_label(char line[MAX_LINE_LEN], char **out, LogContext context) {
   char *word;
   char illegal_char = '\0';
@@ -65,7 +72,8 @@ static int scan_label(char line[MAX_LINE_LEN], char **out, LogContext context) {
   return true;
 }
 
-/* [DOCS NEEDED] */
+/* Parses a define command (e.g. .define a = 5), given the line itself, and an out argument for
+ * the ParsedLine struct (and log-context), prints any syntactical errors */
 static void scan_define(char content[], ParsedLine *out, LogContext context) {
   char *word;
   ScanArgumentResult scan_result;
@@ -126,6 +134,8 @@ static void scan_define(char content[], ParsedLine *out, LogContext context) {
   out->content.define.value = word;
 }
 
+/* Scans a command line (e.g. prn #-5), given the line itself, and an out argument for
+ * the ParsedLine struct (and log-context), prints any syntactical errors */
 static void scan_command(char content[], ParsedLine *out, LogContext context) {
   char *word;
   ScanArgumentResult scan_result;
@@ -204,7 +214,8 @@ static void scan_command(char content[], ParsedLine *out, LogContext context) {
   out->content.command.dest_arg = word;
 }
 
-/* [DOCS NEEDED] */
+/* Scans a dot-instruction line (e.g. .data -5, 46, len), given the line itself, and an out argument
+ * for the ParsedLine struct (and log-context), prints any syntactical errors */
 static void scan_dot_instruction(char content[], ParsedLine *out, LogContext context) {
   char *word;
 

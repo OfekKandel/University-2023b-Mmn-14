@@ -1,3 +1,5 @@
+/* The source file for parse_util.h */
+
 #include "parse_util.h"
 #include "encoding_util.h"
 #include "file_util.h"

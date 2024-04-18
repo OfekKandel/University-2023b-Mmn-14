@@ -1,4 +1,15 @@
-/* [DOCS NEEDED] */
+/* The source file for assembler.h
+ * IMPORTANT NOTE REGARDING THE ASSEMBLER ALGORITHM:
+ * The algorithm written in this project is very similar to the one proposed in the assignment, with
+ * one import distinction: While the proposed algorithm iterates over the file itself twice (it
+ * reads the source code on each pass) this algorithm only reads the source file only once, instead
+ * opting, during the first pass, to store an empty binary word next to the name of the symbol that
+ * should be filled-in in its place, and then iterating over the instruction table a second time
+ * (once the symbol table has been fully created) and filling-in the missing symbols (second pass).
+ * This method has the advantage of saving a lot of duplicate work re-reading the file.
+ * Note: the extern and entry commands are also performed in the first pass here, by marking symbols
+ * as entries or external before their value is filled-in */
+
 #include "assembler.h"
 #include "assembling_util.h"
 #include "binary_table.h"
@@ -10,7 +21,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* [DOCS NEEDED] */
+/* Frees the dynamically allocated memory used by the data, instruction, and symbol tables
+ * Input: The symbol, data, and instruction tables */
 static void free_tables(SymbolTable symbol_table, BinaryTable data_table,
                         BinaryTable instruction_table) {
   free_symbol_table(symbol_table);
@@ -18,6 +30,9 @@ static void free_tables(SymbolTable symbol_table, BinaryTable data_table,
   free_binary_table(instruction_table);
 }
 
+/* Writes the object file as described in the assignment, (header, and the instruction and data
+ * tables one after another in the encoded format with numbers)
+ * Input: The .ob file to write to, and the data and instruction tables */
 static void write_ob_file(FILE *ob_file, BinaryTable data_table, BinaryTable instruction_table) {
   BinaryTableNode *iter;
   int word_num = 100;
@@ -39,6 +54,10 @@ static void write_ob_file(FILE *ob_file, BinaryTable data_table, BinaryTable ins
   }
 }
 
+/* Writes the entries file as specified in the assignment (each entry symbol with its value)
+ * Input: the symbol table and the .ent file to write to.
+ * Output: Returns false if any errors occurred, else true. Also writes to the .ent file of course.
+ * Errors: if a symbol marked entry hasn't been filled in (it doesn't exist), an error is printed */
 static int write_ent_file(SymbolTable *symbol_table, FILE *ent_file) {
   SymbolTableNode *iter;
   int successful = true;
@@ -61,7 +80,11 @@ static int write_ent_file(SymbolTable *symbol_table, FILE *ent_file) {
   return successful;
 }
 
-/* [DOCS NEEDED] returns whether the line was parsed successfully */
+/* Performs the first pass on a single source line (possibly leaving some lines to be filled-in)
+ * Input: the current line to be encoded, the symbol, instruction, and data tables, and the line's
+ *        log-context (file and line number)
+ * Output: Returns false if any errors occurred, else true. Also appends to the given tables.
+ * Errors: Prints any errors contained in the line (which can be detected in the first pass) */
 static int first_pass_line(char *line, SymbolTable *symbol_table, BinaryTable *instruction_table,
                            BinaryTable *data_table, LogContext context) {
   ParsedLine parsed_line = parse_line(line, context);
@@ -86,7 +109,12 @@ static int first_pass_line(char *line, SymbolTable *symbol_table, BinaryTable *i
   return true;
 }
 
-/* [DOCS NEEDED] returns whether the pass was successful */
+/* Performs the first pass on a given file
+ * Input: the source file to read from, the symbol, instruction, and data tables (which will be
+ *        written into) and the file's log-context
+ * Output: Returns false if any errors occurred during the pass, else true, writes to the tables
+ * Algorithm: Encodes every line in the file, leaving spaces to be filled-in in the instruction
+ *            table for the second-pass */
 static int first_pass(FILE *src_file, SymbolTable *symbol_table, BinaryTable *instruction_table,
                       BinaryTable *data_table, LogContext context) {
   SymbolTableNode *iter;
@@ -108,7 +136,11 @@ static int first_pass(FILE *src_file, SymbolTable *symbol_table, BinaryTable *in
   return succesful;
 }
 
-/* [DOCS NEEDED] */
+/* Performs the second pass on the given instruction table (filling in the symbols) and writes the
+ * entry and externals files.
+ * Input: The symbol, instruction, and data tables, as well as the .ent .ext files to write to.
+ * Output: Returns false if any errors occurred during the pass, else true, also write the .ext and
+ *         .ent files */
 static int second_pass(SymbolTable *symbol_table, BinaryTable *instruction_table,
                        BinaryTable *data_table, FILE *ent_file, FILE *ext_file) {
   BinaryTableNode *iter;
@@ -145,7 +177,9 @@ static int second_pass(SymbolTable *symbol_table, BinaryTable *instruction_table
   return succesful;
 }
 
-/* [DOCS NEEDED] return true on success */
+/* Fully encodes the given file, performing both passes, and writing the object file
+ * Input: The source, object, entries, and externals files, and the file log-context
+ * Output: Returns false if any errors occurred, else true, also writes all files */
 static int encode_file(FILE *src_file, FILE *ob_file, FILE *ent_file, FILE *ext_file,
                        LogContext context) {
   SymbolTable symbol_table;

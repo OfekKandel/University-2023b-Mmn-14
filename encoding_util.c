@@ -1,3 +1,5 @@
+/* The source file for the encoding_util.h file */
+
 #include "encoding_util.h"
 #include <stdbool.h>
 #include <string.h>
@@ -15,6 +17,8 @@ BinaryWord arg_word_to_binary(ArgumentWord first) {
   return word;
 }
 
+/* [Docs in header file] the adressing mode is decided purely based on syntax, no check of the
+ * validity of the source code is performed here */
 int get_adressing_mode(char *arg) {
   if (arg == NULL || arg[0] == '#') return 0; /* 0 - Immediate */
   if (is_register_name(arg)) return 3;        /* 3 - Register */
@@ -25,6 +29,7 @@ int get_adressing_mode(char *arg) {
   return 1; /* 1 - Direct */
 }
 
+/* [Docs in header file] implements the opcode table (page 18) using a list of ifs and strcmp(s) */
 int get_opcode(char *command) {
   if (strcmp(command, "mov") == 0) return 0;
   if (strcmp(command, "cmp") == 0) return 1;
@@ -45,6 +50,8 @@ int get_opcode(char *command) {
   return -1;
 }
 
+/* [Docs in header file] while this function looks daunting it simply implements the different
+ * errors that arise from the adressing modes table (page 33) using a list of if statements */
 int verify_adressing_mode(int opcode, int src_adr, int dest_adr) {
   int src_valid = true, dest_valid = true;
 

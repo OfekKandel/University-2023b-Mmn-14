@@ -18,6 +18,8 @@ char *with_ext(const char *filename, const char *extension) {
   return filepath;
 }
 
+/* [Docs in header file] uses with_ext to get the filepath and attempts to open it, handling errors,
+ * frees the memory allocated by with_ext */
 FILE *open_with_ext(const char *filename, const char *extension, const char *mode,
                     const char *error_desc) {
   char *filepath = with_ext(filename, extension);
@@ -33,6 +35,8 @@ FILE *open_with_ext(const char *filename, const char *extension, const char *mod
   return file;
 }
 
+/* [Docs in header file] uses with_ext to get the filepath and attempts to remove it, handling
+ * errors, frees the memory allocated by with_ext*/
 int remove_file(const char *filename, const char *extension, const char *error_desc) {
   char *filepath = with_ext(filename, extension);
 
@@ -44,6 +48,8 @@ int remove_file(const char *filename, const char *extension, const char *error_d
   return true;
 }
 
+/* [Docs in header file] uses open_with_ext to attempt to open the file, uses fseek and ftell to
+ * check if the position of the last char in the file is zero (the file is empty) */
 int is_file_empty(const char *filename, const char *extension, const char *error_desc) {
   FILE *file = open_with_ext(filename, extension, "r", error_desc);
 
@@ -56,8 +62,8 @@ int is_file_empty(const char *filename, const char *extension, const char *error
   return false;
 }
 
-
 /* Logger ----------------------------------------------- */
+/* [Docs in header file] does not use with_ext, but instead uses fprint */
 void print_log_context(LogContext log_info, char *severity) {
   printf("%s[%s%s - Line %d]: ", severity, log_info.filename, log_info.file_ext, log_info.line);
 }

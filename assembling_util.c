@@ -1,4 +1,6 @@
-/* [DOCS NEEDED] */
+/* The source file for assembling_util.h
+ * Contains the bulk of the logic for the assembler's first pass, and used only by it, does not edit
+ * any files, only updates the tables */
 #include "binary_table.h"
 #include "encoding_util.h"
 #include "parse_util.h"
@@ -8,7 +10,14 @@
 #include <stdbool.h>
 #include <string.h>
 
-/* [DOCS NEEDED] returns false on failure */
+/* Gets the value of an argument (given as a string) which should be a constant, meaning either a
+ * number or a constant declared via the .define instruction (e.g. 5, -7, len)
+ * Input: The symbol table, the argument as a string, an int pointer used as an output variable, and
+ *        the current line's log-context
+ * Output: Returns false on errors, else true. On success outputs the value of the constant to the
+ *         out variable.
+ * Errors: Any formatting errors in the argument, or in the attempt to get its value (e.g. If the
+ * constant has not been declared, or if it is not a constant but a label) will be printed */
 static int get_constant_value(SymbolTable *symbol_table, char *str, int *out, LogContext context) {
   SymbolTableNode *constant;
 
@@ -35,7 +44,11 @@ static int get_constant_value(SymbolTable *symbol_table, char *str, int *out, Lo
   return true;
 }
 
-/* [DOCS NEEDED] */
+/* Encodes a command argument of type array index (e.g. arr[4], dtt[len]), leaving an empty word
+ * with a symbol name in place of the array label to be filled-in in the second pass
+ * Input: The argument as a string, the instruction and symbol tables, and the line's log-context
+ * Output: Returns false on errors, else true, also edits the instruction table
+ * Errors: Any formatting or logical errors in the given code will be printed */
 static int add_array_index_arg(char *arg, BinaryTable *instruction_table, SymbolTable *symbol_table,
                                LogContext context) {
   int index_value;
@@ -57,7 +70,12 @@ static int add_array_index_arg(char *arg, BinaryTable *instruction_table, Symbol
   return true;
 }
 
-/* [DOCS NEEDED] returns how much to skip, 0 if scan should stop, -1 if there were errors */
+/* Encodes and adds a single argument of a .data instruction to the data table
+ * Input: The argument (and all the following arguments, as a string) the data and symbol tables,
+ *        and the line's log-context
+ * Output: Returns how many chars to skip to get to the next argument in the string, if there is no
+ *         next argument 0, if there were errors -1
+ * Errors: Any formatting or logical errors in the argument's code will be printed */
 static int add_data_argument(char *content, BinaryTable *data_table, SymbolTable *symbol_table,
                              LogContext context) {
   BinaryWord word;
@@ -99,7 +117,13 @@ static int add_data_argument(char *content, BinaryTable *data_table, SymbolTable
   return res.skip; /* Return chars to skip */
 }
 
-/* [DOCS NEEDED] return whether the data instruction was scanned successfully */
+/* Encodes and adds a full a .data instruction to the data table
+ * Input: The line (as a DotInstructionLine struct), the data and symbol tables, and the line's
+ *        log-context
+ * Output: Return false on errors, else true. Also edits the data and symbol tables
+ * Errors: Any formatting or logical errors in the instruction will be printed
+ * Algorithm: As a .data instruction's arguments are not parsed by the initial parser, some
+ * additional parsing functions are used to iterate over the arguments */
 static int add_data_instruction(DotInstructionLine line, BinaryTable *data_table,
                                 SymbolTable *symbol_table, LogContext context) {
   char *content = line.args_start;
@@ -122,6 +146,11 @@ static int add_data_instruction(DotInstructionLine line, BinaryTable *data_table
   return true;
 }
 
+/* Encodes and adds a full a .string instruction to the data table
+ * Input: The line (as a DotInstructionLine struct), the data and symbol tables, and the line's
+ *        log-context
+ * Output: Return false on errors, else true. Also edits the data and symbol tables
+ * Errors: Any formatting or logical errors in the instruction will be printed */
 static int add_string_instruction(DotInstructionLine line, BinaryTable *data_table,
                                   SymbolTable *symbol_table, LogContext context) {
   char *content = line.args_start;
@@ -171,9 +200,14 @@ static int add_string_instruction(DotInstructionLine line, BinaryTable *data_tab
   return true;
 }
 
-/* [DOCS NEEDED] flag: 1 - entry 2 - extern */
-static int add_ent_ext_instruction(DotInstructionLine line, SymbolTable *symbol_table, int flag,
-                                   LogContext context) {
+/* Encodes and adds a .entry or .extern instruction to the data table
+ * Input: The line (as a DotInstructionLine struct), the symbol table, the linker flag (extern/entry
+ *        based on which command it is), and the line's log-context
+ * Output: Return false on errors, else true. Also edits the data and symbol tables
+ * Errors: Any formatting or logical errors in the instruction will be printed
+ * Assumes: the given linker flag represents the right type of instruction */
+static int add_ent_ext_instruction(DotInstructionLine line, SymbolTable *symbol_table,
+                                   LinkerFlag flag, LogContext context) {
   char *argument = line.args_start;
   ScanArgumentResult res = scan_argument(argument, ','); /* Separator only matters in errors here */
 
@@ -188,8 +222,12 @@ static int add_ent_ext_instruction(DotInstructionLine line, SymbolTable *symbol_
   return mark_symbol(symbol_table, argument, flag, context);
 }
 
-/* [DOCS NEEDED] returns false if the argument could not be added, registers are not encoded with
- * this function, instead with encode_registers */
+/* Encodes and adds a single command argument to the instruction table
+ * Input: The argument (as a string), the adressing mode of the argument, the instruction and symbol
+ * tables, and the line's log-context
+ * Output: Return false on errors, else true. Also edits the instruction and symbol tables
+ * Errors: Any formatting or logical errors in the instruction will be printed
+ * Assumes: the given argument is not of type register (these are encoded with encode_registers) */
 static int add_cmd_arg_word(char *arg, int adressing_mode, BinaryTable *instruction_table,
                             SymbolTable *symbol_table, LogContext context) {
   ArgumentWord word;

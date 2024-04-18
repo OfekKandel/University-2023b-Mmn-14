@@ -1,4 +1,4 @@
-/* [DOCS NEEDED] */
+/* The source file for the binary_table.h file */
 #include "binary_table.h"
 #include "parse_util.h"
 #include <stdlib.h>
@@ -31,7 +31,10 @@ void append_symbol_word(BinaryTable *table, char *symbol) {
     table->tail = table->tail->next = node;
 }
 
-/* [DOCS NEEDED] returns '-' if more than two bits were given */
+/* Converts a given two bits into their corresponding char based on the specified encoding
+ * Input: A 2 bit int
+ * Output: A single char representing the 2 bits
+ * Assumes: The given number is not larger than 2 bits can store (returns '-' in that case) */
 static char get_encoded_two_bits(int bits) {
   switch (bits) {
   case 0:
@@ -55,6 +58,7 @@ void get_encoded_word(BinaryWord word, char out[8]) {
   out[7] = '\0';
 }
 
+/* Frees the given binary node, and recursively frees every node after it */
 static void free_binary_node(BinaryTableNode *node) {
   if (node == NULL) return;
   free_binary_node(node->next);

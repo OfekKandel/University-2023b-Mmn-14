@@ -1,4 +1,4 @@
-/* [DOCS NEEDED] */
+/* The source file for symbol_table.h */
 #include "symbol_table.h"
 #include "parse_util.h"
 #include <stdbool.h>
