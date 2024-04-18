@@ -60,7 +60,7 @@ static int add_array_index_arg(char *arg, BinaryTable *instruction_table, Symbol
   if (index_str == NULL) return false;
 
   /* Add word for the array symbol */
-  append_symbol_word(instruction_table, arg);
+  append_symbol_word(instruction_table, arg, context);
 
   /* Get value of the index and add it to the table */
   if (!get_constant_value(symbol_table, index_str, &index_value, context)) return false;
@@ -241,7 +241,7 @@ static int add_cmd_arg_word(char *arg, int adressing_mode, BinaryTable *instruct
     append_word(instruction_table, arg_word_to_binary(word));
     break;
   case 1: /* 1 - Direct */
-    append_symbol_word(instruction_table, arg);
+    append_symbol_word(instruction_table, arg, context);
     break;
   case 2: /* 2 - Index */
     if (!add_array_index_arg(arg, instruction_table, symbol_table, context)) return false;
@@ -293,6 +293,7 @@ int add_command(CommandLine line, BinaryTable *instruction_table, SymbolTable *s
                 LogContext context) {
   int successful = true, res;
   BinaryWord word;
+  VerifyAdressingResult verify_res;
   CommandFirstWord first_word;
   first_word.are = 0; /* ARE is always 0 in first word */
 
@@ -316,30 +317,32 @@ int add_command(CommandLine line, BinaryTable *instruction_table, SymbolTable *s
   /* Get addressing modes and verify them */
   first_word.src_adressing = get_adressing_mode(line.src_arg);
   first_word.dest_adressing = get_adressing_mode(line.dest_arg);
-  res = verify_adressing_mode(first_word.opcode,
-                              (line.src_arg == NULL) ? -1 : first_word.src_adressing,
-                              (line.dest_arg == NULL) ? -1 : first_word.dest_adressing);
-  if (res != 0) {
+  verify_res = verify_adressing_mode(first_word.opcode,
+                                     (line.src_arg == NULL) ? -1 : first_word.src_adressing,
+                                     (line.dest_arg == NULL) ? -1 : first_word.dest_adressing);
+  if (verify_res != AdressingsOK) {
     print_log_context(context, "ERROR");
-    switch (res) {
-    case 1:
-      printf("Command '%s' takes no arguments\n", line.cmd);
-      return false;
-    case 2:
-      printf("Command '%s' doesn't take a source argument\n", line.cmd);
-      return false;
-    case 3:
-      printf("Invalid destination addressing mode for command '%s'\n", line.cmd);
-      return false;
-    case 4:
-      printf("Invalid source addressing mode for command '%s'\n", line.cmd);
-      return false;
-    case 5:
-      printf("Source and destination adressing modes for command '%s' are wrong\n", line.cmd);
-      return false;
-    case 6:
+    switch (verify_res) {
+    case MissingArgument:
       printf("Missing arguments for command '%s'\n", line.cmd);
       return false;
+    case TakesNoArguments:
+      printf("Command '%s' takes no arguments\n", line.cmd);
+      return false;
+    case NoSourceArgument:
+      printf("Command '%s' doesn't take a source argument\n", line.cmd);
+      return false;
+    case DestinationAdressingWrong:
+      printf("Invalid destination addressing mode for command '%s'\n", line.cmd);
+      return false;
+    case SourceAdressingWrong:
+      printf("Invalid source addressing mode for command '%s'\n", line.cmd);
+      return false;
+    case BothAdressingsWrong:
+      printf("Source and destination adressing modes for command '%s' are wrong\n", line.cmd);
+      return false;
+    default:
+      break;
     }
   }
 

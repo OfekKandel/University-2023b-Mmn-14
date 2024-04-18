@@ -153,7 +153,7 @@ static int second_pass(SymbolTable *symbol_table, BinaryTable *instruction_table
 
     symbol = search_symbol(symbol_table, iter->symbol);
     if (symbol == NULL) {
-      print_log_context(symbol->context, "ERROR");
+      print_log_context(iter->context, "ERROR");
       printf("Usage of undeclared symbol '%s'\n", iter->symbol);
       succesful = false;
       continue;

@@ -1,5 +1,6 @@
 /* The source file for the binary_table.h file */
 #include "binary_table.h"
+#include "file_util.h"
 #include "parse_util.h"
 #include <stdlib.h>
 #include <string.h>
@@ -16,9 +17,10 @@ void append_word(BinaryTable *table, BinaryWord word) {
     table->tail = table->tail->next = node;
 }
 
-void append_symbol_word(BinaryTable *table, char *symbol) {
+void append_symbol_word(BinaryTable *table, char *symbol, LogContext context) {
   BinaryTableNode *node = malloc(sizeof(BinaryTableNode));
   node->content.content = 0;
+  node->context = context;
   table->counter++;
 
   /* Dynamically allocate space for the symbol name */

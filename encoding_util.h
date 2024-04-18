@@ -52,9 +52,19 @@ void encode_registers(BinaryTable *instruction_table, char *src_reg, char *dest_
  * source argument (was given)| 3 - destination addressing wrong | 4 - source addressing wrong
  * | 5 - both adressings are wrong | 6 - missing argument */
 
+typedef enum VerifyAdressingResult {
+  AdressingsOK,
+  MissingArgument,
+  TakesNoArguments, /* Some were given */
+  NoSourceArgument, /* One was given */
+  DestinationAdressingWrong,
+  SourceAdressingWrong,
+  BothAdressingsWrong
+} VerifyAdressingResult ;
+
 /* Verifies that the adressing modes for the two given arguments of a command or compatible with the
  * command (based on the given table in the assignment)
  * Input: the command's opcode as specified in the assignment, the source and destination adressing,
  *        modes for both arguments (with -1 for no argument)
  * Output: Based on the VerifyAdressingMode enum, the result of the check */
-int verify_adressing_mode(int opcode, int src_adr, int dest_adr);
+VerifyAdressingResult verify_adressing_mode(int opcode, int src_adr, int dest_adr);

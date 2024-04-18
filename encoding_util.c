@@ -52,20 +52,20 @@ int get_opcode(char *command) {
 
 /* [Docs in header file] while this function looks daunting it simply implements the different
  * errors that arise from the adressing modes table (page 33) using a list of if statements */
-int verify_adressing_mode(int opcode, int src_adr, int dest_adr) {
+VerifyAdressingResult verify_adressing_mode(int opcode, int src_adr, int dest_adr) {
   int src_valid = true, dest_valid = true;
 
   /* Check if too many arguments were given */
   if (15 <= opcode && opcode <= 16)
-    if (dest_adr != -1) return 1; /* 1- Command takes no arguments but some were given */
+    if (dest_adr != -1) return TakesNoArguments;
   if ((4 <= opcode && opcode <= 5) || (7 <= opcode && opcode <= 14))
-    if (src_adr != -1) return 2; /* 2 - Command takes no source argument but one was given */
+    if (src_adr != -1) return NoSourceArgument;
 
   /* Check if there are missing arguments */
   if (opcode == 6 || (0 <= opcode && opcode <= 3)) {
-    if (src_adr == -1 || dest_adr == -1) return 6; /* 6 - Missing argument */
+    if (src_adr == -1 || dest_adr == -1) return MissingArgument;
   } else if (15 != opcode && opcode != 16) {
-    if (dest_adr == -1) return 6; /* 6 - Missing argument */
+    if (dest_adr == -1) return MissingArgument;
   }
 
   /* Check if source argument is valid */
@@ -83,13 +83,13 @@ int verify_adressing_mode(int opcode, int src_adr, int dest_adr) {
     dest_valid = dest_adr == 1 || dest_adr == 3; /* 1,3 */
 
   if (!src_valid && !dest_valid)
-    return 5; /* 5 - both adressing are wrong */
+    return BothAdressingsWrong;
   else if (!src_valid)
-    return 4; /* 4 - source adressing wrong */
+    return SourceAdressingWrong;
   else if (!dest_valid)
-    return 3; /* 3 - destination adressing wrong */
+    return DestinationAdressingWrong;
 
-  return 0; /* 0 - Both addressings are valid */
+  return AdressingsOK;
 }
 
 void encode_registers(BinaryTable *instruction_table, char *src_reg, char *dest_reg) {
