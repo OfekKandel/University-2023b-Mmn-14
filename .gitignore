@@ -8,7 +8,6 @@ compile_flags.txt
 main.dSYM/
 
 # Inputs & example outputs
-inputs/
 example_outptus/
 
 # Diffs
